@@ -164,7 +164,7 @@ class Escrotum(gtk.Window):
 
         # if no motion(click and release)
         # get screenshot of the selected window
-        if self.width == 0 and self.height == 0:
+        if self.height < 5 or self.width < 5:
             xid = get_selected_window()
             if not xid:
                 print "Can't get the xid of the selected window"
