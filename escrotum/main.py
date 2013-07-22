@@ -1,3 +1,4 @@
+import sys
 import optparse
 import datetime
 
@@ -43,11 +44,17 @@ def get_selected_window():
     return value
 
 class Escrotum(gtk.Window):
-    def __init__(self, filename=None, selection=False, xid=None):
+    def __init__(self, filename=None, selection=False, xid=None, delay=None,
+            countdown=False):
         super(Escrotum, self).__init__(gtk.WINDOW_POPUP)
         self.started = False
 
         self.filename = filename
+
+        self.delay = delay
+        self.selection = selection
+        self.xid = xid
+        self.countdown = countdown
 
         if not xid:
             self.root = gtk.gdk.get_default_root_window()
@@ -65,7 +72,25 @@ class Escrotum(gtk.Window):
 
         self.add(self.area)
 
-        if selection and not xid:
+        if delay:
+            if countdown:
+                sys.stdout.write("Taking shot in ..%s" % delay)
+                sys.stdout.flush()
+            gobject.timeout_add(1000, self.start)
+        else:
+            self.start()
+
+    def start(self):
+        if self.delay:
+            self.delay -= 1
+            if self.countdown:
+                sys.stdout.write(" ..%s" % self.delay)
+                sys.stdout.flush()
+            return True
+        if self.delay == 0 and self.countdown:
+            print "."
+
+        if self.selection and not self.xid:
             self.grab()
         else:
             self.width, self.height = self.root.get_size()
@@ -252,6 +277,10 @@ def get_options():
             help='interactively choose a window or rectnagle with the mouse')
     parser.add_option('-x', '--xid', default=None, type='int',
             help='take a screenshot of the xid window')
+    parser.add_option('-d', '--delay', default=None, type='int',
+            help='wait DELAY seconds before taking a shot')
+    parser.add_option('-c', '--countdown', default=False, action="store_true",
+            help='show a countdown before taking the shot')
 
     return parser.parse_args()
 
@@ -265,7 +294,8 @@ def run():
     if len(args) > 0:
         filename = args[0]
 
-    Escrotum(filename=filename, selection=opts.select, xid=opts.xid)
+    Escrotum(filename=filename, selection=opts.select, xid=opts.xid,
+            delay=opts.delay, countdown=opts.countdown)
     gtk.main()
 
 if __name__ == "__main__":
