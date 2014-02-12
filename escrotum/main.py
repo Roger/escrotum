@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 import sys
 import optparse
 import datetime
@@ -49,6 +51,14 @@ class Escrotum(gtk.Window):
         super(Escrotum, self).__init__(gtk.WINDOW_POPUP)
         self.started = False
 
+        screen = self.get_screen()
+        colormap = screen.get_rgba_colormap()
+
+        self.rgba_support = False
+        if (colormap is not None and screen.is_composited()):
+            self.rgba_support = True
+            self.set_opacity(0.4)
+
         self.filename = filename
 
         self.delay = delay
@@ -97,6 +107,8 @@ class Escrotum(gtk.Window):
             self.screenshot()
 
     def draw(self):
+        if self.rgba_support:
+            return
         width, height = self.get_size()
 
         mask = gtk.gdk.Pixmap(None, width, height, 1)
@@ -119,8 +131,9 @@ class Escrotum(gtk.Window):
         black_gc = self.style.black_gc
 
         # actualy paint the window
-        self.area.window.draw_rectangle(black_gc, True, 0, 0, width, height)
-        self.area.window.draw_rectangle(white_gc, True, 1, 1, width-2, height-2)
+        self.area.window.draw_rectangle(white_gc, True, 0, 0, width, height)
+        self.area.window.draw_rectangle(black_gc, True, 1, 1, width-2,
+                                        height-2)
         self.draw()
 
     def grab(self):
