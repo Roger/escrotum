@@ -196,7 +196,7 @@ class Escrotum(gtk.Window):
         Capture the screenshot based on the window size or the selected window
         """
 
-        x, y  = (self.x, self.y)
+        x, y = (self.x, self.y)
         window = self.root
         width, height = self.width, self.height
 
@@ -212,8 +212,8 @@ class Escrotum(gtk.Window):
             x = y = 0
 
         pb = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8, width, height)
-        pb = pb.get_from_drawable(window, self.root.get_colormap(), x, y, 0, 0,
-                width, height)
+        pb = pb.get_from_drawable(window, window.get_colormap(), x, y, 0, 0,
+                                  width, height)
         if not pb:
             print "Invalid Pixbuf"
             exit(2)
