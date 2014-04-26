@@ -2,9 +2,9 @@
 
 import os
 import sys
-import optparse
 import datetime
 import subprocess
+import argparse
 
 import gtk
 import gobject
@@ -12,7 +12,7 @@ import gobject
 from utils import get_selected_window, daemonize
 
 
-VERSION = "0.2.1"
+__version__ = "0.2.1"
 
 EXIT_XID_ERROR = 1
 EXIT_INVALID_PIXBUF = 2
@@ -364,54 +364,61 @@ def get_options():
   4 user canceled selection
 """
 
-    # fix newlines
-    optparse.OptionParser.format_epilog = lambda self, formatter: self.epilog
-    parser = optparse.OptionParser(usage='Usage: %prog [filename]',
-                                   epilog=epilog)
-    parser.add_option('-v', '--version', default=False, action='store_true',
-                      help='output version information and exit')
-    parser.add_option('-s', '--select', default=False, action='store_true',
-                      help='interactively choose a window or rectangle with '
-                           'the mouse, cancels with Esc or Right Click')
-    parser.add_option('-x', '--xid', default=None, type='int',
-                      help='take a screenshot of the xid window')
-    parser.add_option('-d', '--delay', default=None, type='int',
-                      help='wait DELAY seconds before taking a shot')
-    parser.add_option('--selection-delay', default=250, type='int',
-                      help='delay in milliseconds between selection/screenshot'
-                      )
-    parser.add_option('-c', '--countdown', default=False, action="store_true",
-                      help='show a countdown before taking the shot '
-                           '(requires delay)')
-    parser.add_option('-C', '--clipboard', default=False, action="store_true",
-                      help='store the image on the clipboard')
-    parser.add_option('-e', '--exec', default=None, type="string",
-                      dest="command",
-                      help="run the command after the image is taken")
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Minimalist screenshot capture program inspired by scrot.",
+        epilog=epilog)
+
+    parser.add_argument(
+        '-v', '--version', default=False, action='store_true',
+        help='output version information and exit')
+    parser.add_argument(
+        '-s', '--select', default=False, action='store_true',
+        help='interactively choose a window or rectangle with '
+             'the mouse, cancels with Esc or Right Click')
+    parser.add_argument(
+        '-x', '--xid', default=None, type='int',
+        help='take a screenshot of the xid window')
+    parser.add_argument(
+        '-d', '--delay', default=None, type='int',
+        help='wait DELAY seconds before taking a shot')
+    parser.add_argument(
+        '--selection-delay', default=250, type='int',
+        help='delay in milliseconds between selection/screenshot')
+    parser.add_argument(
+        '-c', '--countdown', default=False, action="store_true",
+        help='show a countdown before taking the shot (requires delay)')
+    parser.add_argument(
+        '-C', '--clipboard', default=False, action="store_true",
+        help='store the image on the clipboard')
+    parser.add_argument(
+        '-e', '--exec', default=None, type="string", dest="command",
+        help="run the command after the image is taken")
+    parser.add_argument(
+        'FILENAME', type=str, nargs="?",
+        help="image filename, default is "
+             "%%Y-%%m-%%d-%%H%%M%%S_$wx$h_escrotum.png")
 
     return parser.parse_args()
 
 
 def run():
-    (opts, args) = get_options()
-    if opts.version:
-        print "escrotum %s" % VERSION
+    args = get_options()
+
+    if args.version:
+        print("escrotum %s" % __version__)
         exit()
 
-    if opts.countdown and not opts.delay:
+    if args.countdown and not args.delay:
         print "Countdown parameter requires delay"
         exit()
 
-    filename = None
-    if len(args) > 0:
-        filename = args[0]
-
-    if opts.clipboard:
+    if args.clipboard:
         daemonize()
 
-    Escrotum(filename=filename, selection=opts.select, xid=opts.xid,
-             delay=opts.delay, countdown=opts.countdown,
-             use_clipboard=opts.clipboard, command=opts.command)
+    Escrotum(filename=args.FILENAME, selection=args.select, xid=args.xid,
+             delay=args.delay, countdown=args.countdown,
+             use_clipboard=args.clipboard, command=args.command)
 
     try:
         gtk.main()
