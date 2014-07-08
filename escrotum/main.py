@@ -162,10 +162,17 @@ class Escrotum(gtk.Window):
             if event.button != 1:
                 print "Canceled by the user"
                 exit()
+            # grab the keyboard only when selection started
+            gtk.gdk.keyboard_grab(self.root)
             self.started = True
             self.start_x = int(event.x)
             self.start_y = int(event.y)
             self.move(self.x, self.y)
+
+        elif event.type == gtk.gdk.KEY_RELEASE:
+            if gtk.gdk.keyval_name(event.keyval) == "Escape":
+                print "Canceled by the user"
+                exit()
 
         elif event.type == gtk.gdk.MOTION_NOTIFY:
             if not self.started:
