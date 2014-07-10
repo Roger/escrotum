@@ -47,9 +47,12 @@ def get_selected_window():
 
 class Escrotum(gtk.Window):
     def __init__(self, filename=None, selection=False, xid=None, delay=None,
-            countdown=False):
+                 countdown=False, use_clipboard=False):
         super(Escrotum, self).__init__(gtk.WINDOW_POPUP)
         self.started = False
+
+        self.clipboard_owner = None
+        self.use_clipboard = use_clipboard
 
         screen = self.get_screen()
         colormap = screen.get_rgba_colormap()
@@ -153,6 +156,15 @@ class Escrotum(gtk.Window):
 
         gtk.gdk.event_handler_set(self.event_handler)
 
+    def ungrab(self):
+        """
+        Ungrab the mouse and keyboard
+        """
+
+        self.root.set_events(())
+        gtk.gdk.pointer_ungrab()
+        gtk.gdk.keyboard_ungrab()
+
     def event_handler(self, event):
         """
         Handle mouse events
@@ -192,7 +204,7 @@ class Escrotum(gtk.Window):
 
             self.set_rect_size(event)
 
-            gtk.gdk.pointer_ungrab()
+            self.ungrab()
             self.hide()
             gobject.timeout_add(100, self.screenshot)
         else:
@@ -224,6 +236,37 @@ class Escrotum(gtk.Window):
         if not pb:
             print "Invalid Pixbuf"
             exit(2)
+
+        if self.use_clipboard:
+            self.save_clipboard(pb)
+        else:
+            self.save_file(pb, width, height)
+
+    def save_clipboard(self, pb):
+        """
+        Save the pixbuf to the clipboard
+        escrotum would be alive until the clipboard owner is changed
+        """
+
+        clipboard = gtk.Clipboard()
+        clipboard.set_image(pb)
+        clipboard.connect("owner-change", self.on_owner_change)
+
+    def on_owner_change(self, clipboard, event):
+        """
+        Handle the selection ownership change
+        XXX: find a better way, this fills racy
+        """
+
+        if not self.clipboard_owner:
+            self.clipboard_owner = event.owner
+        elif self.clipboard_owner != event.owner:
+            exit()
+
+    def save_file(self, pb, width, height):
+        """
+        Stores the pixbuf as a file
+        """
 
         if not self.filename:
             self.filename = "%Y-%m-%d-%H%M%S_$wx$h_escrotum.png"
@@ -301,6 +344,8 @@ def get_options():
             help='wait DELAY seconds before taking a shot')
     parser.add_option('-c', '--countdown', default=False, action="store_true",
             help='show a countdown before taking the shot')
+    parser.add_option('-C', '--clipboard', default=False, action="store_true",
+            help='store the image on the clipboard')
 
     return parser.parse_args()
 
@@ -315,7 +360,8 @@ def run():
         filename = args[0]
 
     Escrotum(filename=filename, selection=opts.select, xid=opts.xid,
-            delay=opts.delay, countdown=opts.countdown)
+             delay=opts.delay, countdown=opts.countdown,
+             use_clipboard=opts.clipboard)
     gtk.main()
 
 if __name__ == "__main__":
