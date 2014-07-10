@@ -341,7 +341,7 @@ def get_options():
                       help='output version information and exit')
     parser.add_option('-s', '--select', default=False, action='store_true',
                       help='interactively choose a window or rectnagle with '
-                           'the mouse')
+                           'the mouse, cancels with Esc or Rigth Click')
     parser.add_option('-x', '--xid', default=None, type='int',
                       help='take a screenshot of the xid window')
     parser.add_option('-d', '--delay', default=None, type='int',
