@@ -10,6 +10,7 @@ import gobject
 
 VERSION = "0.1.1"
 
+
 def get_selected_window():
     """
     Ugly workaround to get the selected window, can't use gtk/gdk =/
@@ -31,11 +32,10 @@ def get_selected_window():
 
     mask = c_uint()
     ret = Xlib.XQueryPointer(display, c_uint32(w),
-                        byref(root_id), byref(child_id),
-                        byref(root_x), byref(root_y),
-                        byref(win_x), byref(win_y),
-                        byref(mask)
-                        )
+                             byref(root_id), byref(child_id),
+                             byref(root_x), byref(root_y),
+                             byref(win_x), byref(win_y),
+                             byref(mask))
     if ret == 0:
         return None
 
@@ -44,6 +44,7 @@ def get_selected_window():
     if value == 0:
         value = root_id.value
     return value
+
 
 class Escrotum(gtk.Window):
     def __init__(self, filename=None, selection=False, xid=None, delay=None,
@@ -145,14 +146,14 @@ class Escrotum(gtk.Window):
         """
 
         mask = gtk.gdk.BUTTON_PRESS_MASK | gtk.gdk.BUTTON_RELEASE_MASK | \
-                gtk.gdk.POINTER_MOTION_MASK  | gtk.gdk.POINTER_MOTION_HINT_MASK | \
-                gtk.gdk.ENTER_NOTIFY_MASK | gtk.gdk.LEAVE_NOTIFY_MASK
+            gtk.gdk.POINTER_MOTION_MASK | gtk.gdk.POINTER_MOTION_HINT_MASK | \
+            gtk.gdk.ENTER_NOTIFY_MASK | gtk.gdk.LEAVE_NOTIFY_MASK
 
-        self.root.set_events(gtk.gdk.BUTTON_PRESS | gtk.gdk.MOTION_NOTIFY | \
-                gtk.gdk.BUTTON_RELEASE)
+        self.root.set_events(gtk.gdk.BUTTON_PRESS | gtk.gdk.MOTION_NOTIFY |
+                             gtk.gdk.BUTTON_RELEASE)
 
         gtk.gdk.pointer_grab(self.root, event_mask=mask,
-                cursor=gtk.gdk.Cursor(gtk.gdk.CROSSHAIR))
+                             cursor=gtk.gdk.Cursor(gtk.gdk.CROSSHAIR))
 
         gtk.gdk.event_handler_set(self.event_handler)
 
@@ -312,6 +313,7 @@ class Escrotum(gtk.Window):
         self.y = y
         self.height = height
 
+
 def get_options():
     epilog = """
   SPECIAL STRINGS
@@ -324,30 +326,33 @@ def get_options():
 
   The second kind are internal to escrotum  and are prefixed by '$'
   The following specifiers are recognised:
-                  $w image width
-                  $h image height
+  \t$w image width
+  \t$h image height
   Example:
-          escrotum '%Y-%m-%d_$wx$h_scrotum.png'
-          Creates a file called something like 2013-06-17-082335_263x738_escrotum.png"""
+  \tescrotum '%Y-%m-%d_$wx$h_scrotum.png'
+  \tCreates a file called something like 2013-06-17-082335_263x738_escrotum.png
+"""
 
     # fix newlines
     optparse.OptionParser.format_epilog = lambda self, formatter: self.epilog
     parser = optparse.OptionParser(usage='Usage: %prog [filename]',
-            epilog=epilog)
+                                   epilog=epilog)
     parser.add_option('-v', '--version', default=False, action='store_true',
-            help='output version information and exit')
+                      help='output version information and exit')
     parser.add_option('-s', '--select', default=False, action='store_true',
-            help='interactively choose a window or rectnagle with the mouse')
+                      help='interactively choose a window or rectnagle with '
+                           'the mouse')
     parser.add_option('-x', '--xid', default=None, type='int',
-            help='take a screenshot of the xid window')
+                      help='take a screenshot of the xid window')
     parser.add_option('-d', '--delay', default=None, type='int',
-            help='wait DELAY seconds before taking a shot')
+                      help='wait DELAY seconds before taking a shot')
     parser.add_option('-c', '--countdown', default=False, action="store_true",
-            help='show a countdown before taking the shot')
+                      help='show a countdown before taking the shot')
     parser.add_option('-C', '--clipboard', default=False, action="store_true",
-            help='store the image on the clipboard')
+                      help='store the image on the clipboard')
 
     return parser.parse_args()
+
 
 def run():
     (opts, args) = get_options()
