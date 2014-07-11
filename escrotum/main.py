@@ -256,7 +256,8 @@ class Escrotum(gtk.Window):
     def on_owner_change(self, clipboard, event):
         """
         Handle the selection ownership change
-        XXX: find a better way, this fills racy
+        XXX: find a better way, i don't know if this can cause a race condition
+        if other application tries to own the clipboard at the same time
         """
 
         if not self.clipboard_owner:
