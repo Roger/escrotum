@@ -10,6 +10,11 @@ import gobject
 
 VERSION = "0.2.0"
 
+EXIT_XID_ERROR = 1
+EXIT_INVALID_PIXBUF = 2
+EXIT_CANT_SAVE_IMAGE = 3
+EXIT_CANCEL = 4
+
 
 def get_selected_window():
     """
@@ -174,7 +179,7 @@ class Escrotum(gtk.Window):
         if event.type == gtk.gdk.BUTTON_PRESS:
             if event.button != 1:
                 print "Canceled by the user"
-                exit()
+                exit(EXIT_CANCEL)
             # grab the keyboard only when selection started
             gtk.gdk.keyboard_grab(self.root)
             self.started = True
@@ -185,7 +190,7 @@ class Escrotum(gtk.Window):
         elif event.type == gtk.gdk.KEY_RELEASE:
             if gtk.gdk.keyval_name(event.keyval) == "Escape":
                 print "Canceled by the user"
-                exit()
+                exit(EXIT_CANCEL)
 
         elif event.type == gtk.gdk.MOTION_NOTIFY:
             if not self.started:
@@ -226,7 +231,7 @@ class Escrotum(gtk.Window):
             xid = get_selected_window()
             if not xid:
                 print "Can't get the xid of the selected window"
-                exit(1)
+                exit(EXIT_XID_ERROR)
             window = gtk.gdk.window_foreign_new(xid)
             width, height = window.get_size()
             x = y = 0
@@ -236,7 +241,7 @@ class Escrotum(gtk.Window):
                                   width, height)
         if not pb:
             print "Invalid Pixbuf"
-            exit(2)
+            exit(EXIT_INVALID_PIXBUF)
 
         if self.use_clipboard:
             self.save_clipboard(pb)
@@ -286,7 +291,7 @@ class Escrotum(gtk.Window):
             print self.filename
         except Exception, error:
             print error
-            exit(3)
+            exit(EXIT_CANT_SAVE_IMAGE)
         exit()
 
     def set_rect_size(self, event):
@@ -332,6 +337,12 @@ def get_options():
   Example:
   \tescrotum '%Y-%m-%d_$wx$h_scrotum.png'
   \tCreates a file called something like 2013-06-17-082335_263x738_escrotum.png
+
+  EXIT STATUS CODES
+  1 can't get the window by xid
+  2 invalid pixbuf
+  3 can't save the image
+  4 user canceled selection
 """
 
     # fix newlines
