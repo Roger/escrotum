@@ -8,7 +8,7 @@ import gtk
 import gobject
 
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 
 EXIT_XID_ERROR = 1
 EXIT_INVALID_PIXBUF = 2

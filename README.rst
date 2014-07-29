@@ -44,3 +44,9 @@ Features
       Example:
             escrotum '%Y-%m-%d_$wx$h_scrotum.png'
             Creates a file called something like 2013-06-17-082335_263x738_escrotum.png
+
+Install
+-------
+
+* on archlinux, yaourt -S escrotum-git
+* with pip, pip install escrotum
