@@ -359,7 +359,8 @@ def get_options():
     parser.add_option('-d', '--delay', default=None, type='int',
                       help='wait DELAY seconds before taking a shot')
     parser.add_option('-c', '--countdown', default=False, action="store_true",
-                      help='show a countdown before taking the shot')
+                      help='show a countdown before taking the shot '
+                           '(requires delay)')
     parser.add_option('-C', '--clipboard', default=False, action="store_true",
                       help='store the image on the clipboard')
 
@@ -370,6 +371,10 @@ def run():
     (opts, args) = get_options()
     if opts.version:
         print "escrotum %s" % VERSION
+        exit()
+
+    if opts.countdown and not opts.delay:
+        print "Countdown parameter requires delay"
         exit()
 
     filename = None
