@@ -327,15 +327,15 @@ def get_options():
   that are expanded by escrotum when encountered.
 
   There are two types of format specifier. Characters preceded by a '%'
-  are interpretted by strftime(2). See man strftime for examples.
+  are interpreted by strftime(2). See man strftime for examples.
   These options may be used to refer to the current date and time.
 
-  The second kind are internal to escrotum  and are prefixed by '$'
+  The second kind are internal to escrotum and are prefixed by '$'
   The following specifiers are recognised:
   \t$w image width
   \t$h image height
   Example:
-  \tescrotum '%Y-%m-%d_$wx$h_scrotum.png'
+  \tescrotum '%Y-%m-%d_$wx$h_escrotum.png'
   \tCreates a file called something like 2013-06-17-082335_263x738_escrotum.png
 
   EXIT STATUS CODES
@@ -352,8 +352,8 @@ def get_options():
     parser.add_option('-v', '--version', default=False, action='store_true',
                       help='output version information and exit')
     parser.add_option('-s', '--select', default=False, action='store_true',
-                      help='interactively choose a window or rectnagle with '
-                           'the mouse, cancels with Esc or Rigth Click')
+                      help='interactively choose a window or rectangle with '
+                           'the mouse, cancels with Esc or Right Click')
     parser.add_option('-x', '--xid', default=None, type='int',
                       help='take a screenshot of the xid window')
     parser.add_option('-d', '--delay', default=None, type='int',
