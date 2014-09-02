@@ -3,6 +3,7 @@
 import sys
 import optparse
 import datetime
+import subprocess
 
 import gtk
 import gobject
@@ -53,9 +54,11 @@ def get_selected_window():
 
 class Escrotum(gtk.Window):
     def __init__(self, filename=None, selection=False, xid=None, delay=None,
-                 countdown=False, use_clipboard=False):
+                 countdown=False, use_clipboard=False, command=None):
         super(Escrotum, self).__init__(gtk.WINDOW_POPUP)
         self.started = False
+
+        self.command = command
 
         self.clipboard_owner = None
         self.use_clipboard = use_clipboard
@@ -292,6 +295,10 @@ class Escrotum(gtk.Window):
         except Exception, error:
             print error
             exit(EXIT_CANT_SAVE_IMAGE)
+
+        if self.command:
+            subprocess.call(self.command.replace("$f", self.filename),
+                            shell=True)
         exit()
 
     def set_rect_size(self, event):
@@ -363,6 +370,8 @@ def get_options():
                            '(requires delay)')
     parser.add_option('-C', '--clipboard', default=False, action="store_true",
                       help='store the image on the clipboard')
+    parser.add_option('-e', '--command', default=None, type="string",
+                      help="run the command after the image is taken")
 
     return parser.parse_args()
 
@@ -383,7 +392,7 @@ def run():
 
     Escrotum(filename=filename, selection=opts.select, xid=opts.xid,
              delay=opts.delay, countdown=opts.countdown,
-             use_clipboard=opts.clipboard)
+             use_clipboard=opts.clipboard, command=opts.command)
     gtk.main()
 
 if __name__ == "__main__":
