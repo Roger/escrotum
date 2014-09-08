@@ -330,7 +330,7 @@ class Escrotum(gtk.Window):
 def get_options():
     epilog = """
   SPECIAL STRINGS
-  filename parameters can take format specifiers
+  Both the --exec and filename parameters can take format specifiers
   that are expanded by escrotum when encountered.
 
   There are two types of format specifier. Characters preceded by a '%'
@@ -339,6 +339,7 @@ def get_options():
 
   The second kind are internal to escrotum and are prefixed by '$'
   The following specifiers are recognised:
+  \t$f image path/filename (ignored when used in the filename)
   \t$w image width
   \t$h image height
   Example:
