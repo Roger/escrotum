@@ -338,7 +338,7 @@ def get_options():
                            '(requires delay)')
     parser.add_option('-C', '--clipboard', default=False, action="store_true",
                       help='store the image on the clipboard')
-    parser.add_option('-e', '--command', default=None, type="string",
+    parser.add_option('-e', '--exec', default=None, type="string",
                       help="run the command after the image is taken")
 
     return parser.parse_args()
