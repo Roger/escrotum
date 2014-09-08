@@ -8,7 +8,7 @@ import subprocess
 import gtk
 import gobject
 
-from utils import get_selected_window
+from utils import get_selected_window, daemonize
 
 
 VERSION = "0.2.1"
@@ -357,6 +357,9 @@ def run():
     filename = None
     if len(args) > 0:
         filename = args[0]
+
+    if opts.clipboard:
+        daemonize()
 
     Escrotum(filename=filename, selection=opts.select, xid=opts.xid,
              delay=opts.delay, countdown=opts.countdown,
