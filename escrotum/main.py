@@ -393,7 +393,12 @@ def run():
     Escrotum(filename=filename, selection=opts.select, xid=opts.xid,
              delay=opts.delay, countdown=opts.countdown,
              use_clipboard=opts.clipboard, command=opts.command)
-    gtk.main()
+
+    try:
+        gtk.main()
+    except KeyboardInterrupt:
+        print "Canceled by the user"
+        exit(EXIT_CANCEL)
 
 if __name__ == "__main__":
     run()
