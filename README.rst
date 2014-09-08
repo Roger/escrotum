@@ -24,7 +24,7 @@ Features
     Options:
       -h, --help                show this help message and exit
       -v, --version             output version information and exit
-      -s, --select              interactively choose a window or rectnagle with the mouse,
+      -s, --select              interactively choose a window or rectangle with the mouse,
                                 cancels with Esc or Rigth Click
       -x XID, --xid=XID         take a screenshot of the xid window
 
