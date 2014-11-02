@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 
+import os
 import sys
 import optparse
 import datetime
@@ -251,6 +252,7 @@ class Escrotum(gtk.Window):
         self.filename = datetime.datetime.now().strftime(self.filename)
         self.filename = self.filename.replace("$w", str(width))
         self.filename = self.filename.replace("$h", str(height))
+        self.filename = os.path.expanduser(self.filename)
 
         filetype = "png"
         if "." in self.filename:
