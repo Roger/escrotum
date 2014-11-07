@@ -80,3 +80,28 @@ def daemonize():
     os.dup2(si.fileno(), sys.stdin.fileno())
     os.dup2(so.fileno(), sys.stdout.fileno())
     os.dup2(se.fileno(), sys.stderr.fileno())
+
+
+def bgra2rgba(pixels):
+    try:
+        # import here because numpy is slow to import
+        # and not always needed
+        import numpy as np
+        HAS_NUMPY = True
+    except ImporError:
+        import array
+        HAS_NUMPY = False
+        print("No numpy support, saving would be slower")
+
+    # GDK wants RGBA but we currently have BGRA, so let's flip R and B
+    if(HAS_NUMPY):
+        arr = np.frombuffer(pixels, dtype=np.uint8)
+        arr.shape = (-1, 4)
+        data = arr[:,[2,1,0,3]]
+    else:
+        data = array.array ("c", pixels)
+        for x in range (width):
+            for y in range (height):
+                i = (width * y + x) * 4
+                data[i + 0], data[i + 2] = data[i + 2], data[i + 0]
+    return data.tostring()

@@ -7,9 +7,10 @@ import datetime
 import subprocess
 
 import gtk
+import cairo
 import gobject
 
-from utils import get_selected_window, daemonize
+from utils import get_selected_window, daemonize, bgra2rgba
 
 
 VERSION = "0.2.1"
@@ -31,11 +32,11 @@ class Escrotum(gtk.Window):
         self.clipboard_owner = None
         self.use_clipboard = use_clipboard
 
-        screen = self.get_screen()
-        colormap = screen.get_rgba_colormap()
+        self.screen = self.get_screen()
+        colormap = self.screen.get_rgba_colormap()
 
         self.rgba_support = False
-        if (colormap is not None and screen.is_composited()):
+        if (colormap is not None and self.screen.is_composited()):
             self.rgba_support = True
             self.set_opacity(0.4)
 
@@ -214,10 +215,59 @@ class Escrotum(gtk.Window):
             print "Invalid Pixbuf"
             exit(EXIT_INVALID_PIXBUF)
 
+        if window == self.root and len(self.get_geometry()) > 1:
+            pb = self.mask_pixbuf(pb, width, height)
+
         if self.use_clipboard:
             self.save_clipboard(pb)
         else:
             self.save_file(pb, width, height)
+
+    def get_geometry(self):
+        monitors = self.screen.get_n_monitors()
+        return [self.screen.get_monitor_geometry(m) for m in range(monitors)]
+
+    def mask_pixbuf(self, pb, width, height):
+        """
+        Mask the pixbuf so there is no offscreen garbage on multimonitor setups
+        """
+
+        geometry = self.get_geometry()
+        mask = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        mask_cr = cairo.Context(mask)
+
+        # fill transparent
+        mask_cr.set_source_rgba(0, 0, 0, 0)
+        mask_cr.fill()
+        mask_cr.paint()
+        for geo in geometry:
+            mask_cr.rectangle(geo.x, geo.y, geo.width, geo.height)
+            mask_cr.set_source_rgba(1, 1, 1, 1)
+            mask_cr.fill()
+
+        img = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+
+        cr = cairo.Context(img)
+        gdkcr = gtk.gdk.CairoContext(cr)
+
+        # fill with the dafault color
+        gdkcr.set_source_rgba(0, 0, 0, 1)
+        gdkcr.fill()
+        gdkcr.paint()
+
+        # use the mask to paint from the pixbuf
+        gdkcr.set_source_pixbuf(pb, 0, 0)
+        gdkcr.mask_surface(mask, 0, 0)
+        gdkcr.fill()
+
+        stride = img.get_stride()
+        pixels = img.get_data()
+
+        data = bgra2rgba(pixels)
+
+        new_pb = gtk.gdk.pixbuf_new_from_data(data, gtk.gdk.COLORSPACE_RGB,
+                                              True, 8, width, height, stride)
+        return new_pb
 
     def save_clipboard(self, pb):
         """
