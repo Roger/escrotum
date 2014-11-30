@@ -241,6 +241,13 @@ class Escrotum(gtk.Window):
         elif self.clipboard_owner != event.owner:
             exit()
 
+    def _expand_argument(self, width, height, string):
+        string = datetime.datetime.now().strftime(string)
+        string = string.replace("$w", str(width))
+        string = string.replace("$h", str(height))
+        string = os.path.expanduser(string)
+        return string
+
     def save_file(self, pb, width, height):
         """
         Stores the pixbuf as a file
@@ -249,10 +256,7 @@ class Escrotum(gtk.Window):
         if not self.filename:
             self.filename = "%Y-%m-%d-%H%M%S_$wx$h_escrotum.png"
 
-        self.filename = datetime.datetime.now().strftime(self.filename)
-        self.filename = self.filename.replace("$w", str(width))
-        self.filename = self.filename.replace("$h", str(height))
-        self.filename = os.path.expanduser(self.filename)
+        self.filename = self._expand_argument(width, height, self.filename)
 
         filetype = "png"
         if "." in self.filename:
@@ -266,7 +270,7 @@ class Escrotum(gtk.Window):
             exit(EXIT_CANT_SAVE_IMAGE)
 
         if self.command:
-            subprocess.call(self.command.replace("$f", self.filename),
+            subprocess.call(self._expand_argument(width, height, self.command.replace("$f", self.filename)),
                             shell=True)
         exit()
 
