@@ -270,8 +270,9 @@ class Escrotum(gtk.Window):
             exit(EXIT_CANT_SAVE_IMAGE)
 
         if self.command:
-            subprocess.call(self._expand_argument(width, height, self.command.replace("$f", self.filename)),
-                            shell=True)
+            command = self.command.replace("$f", self.filename)
+            command = self._expand_argument(width, height, command)
+            subprocess.call(command, shell=True)
         exit()
 
     def set_rect_size(self, event):
