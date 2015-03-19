@@ -1,2 +1,4 @@
 *.pyc
 escrotum.egg-info
+build/
+dist/
