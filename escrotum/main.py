@@ -183,7 +183,11 @@ class Escrotum(gtk.Window):
 
             self.ungrab()
             self.hide()
-            gobject.timeout_add(100, self.screenshot)
+            tout = 100
+            if self.get_screen().is_composited():
+                tout = 1300
+            gtk.gdk.flush()
+            gobject.timeout_add(tout, self.screenshot)
         else:
             gtk.main_do_event(event)
 
