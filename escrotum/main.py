@@ -70,6 +70,8 @@ class Escrotum(gtk.Window):
         else:
             self.start()
 
+        self.painted = False
+
     def start(self):
         if self.delay:
             self.delay -= 1
@@ -87,6 +89,7 @@ class Escrotum(gtk.Window):
             self.screenshot()
 
     def draw(self):
+        self.painted = True
         if self.rgba_support:
             return
         width, height = self.get_size()
@@ -182,8 +185,19 @@ class Escrotum(gtk.Window):
             self.set_rect_size(event)
 
             self.ungrab()
-            self.hide()
-            gobject.timeout_add(100, self.screenshot)
+            self.painted = False
+            if self.rgba_support:
+                self.set_opacity(0)
+            self.resize(1, 1)
+            self.move(-10, -10)
+
+            # wait until the window is repainted, so borders/shadows
+            # don't appear on the image
+            def wait():
+                if not self.painted:
+                    return True
+                self.screenshot()
+            gobject.timeout_add(10, wait)
         else:
             gtk.main_do_event(event)
 
