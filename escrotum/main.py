@@ -191,6 +191,9 @@ class Escrotum(gtk.Window):
             self.resize(1, 1)
             self.move(-10, -10)
 
+            # Do show, missed for small windows. Without it wait for
+            # 'paint' state will run forever.
+            self.show_all()
             # wait until the window is repainted, so borders/shadows
             # don't appear on the image
             def wait():
