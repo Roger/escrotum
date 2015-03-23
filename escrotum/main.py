@@ -145,6 +145,13 @@ class Escrotum(gtk.Window):
         gtk.gdk.pointer_ungrab()
         gtk.gdk.keyboard_ungrab()
 
+    @property
+    def click_selection(self):
+        """
+        if no motion(click and release) it's a selection of a window
+        """
+        return self.width < 5 and self.height < 5
+
     def event_handler(self, event):
         """
         Handle mouse events
@@ -185,21 +192,33 @@ class Escrotum(gtk.Window):
             self.set_rect_size(event)
 
             self.ungrab()
-            self.painted = False
-            if self.rgba_support:
-                self.set_opacity(0)
-            self.resize(1, 1)
-            self.move(-10, -10)
-
-            # wait until the window is repainted, so borders/shadows
-            # don't appear on the image
-            def wait():
-                if not self.painted:
-                    return True
-                self.screenshot()
-            gobject.timeout_add(10, wait)
+            self.wait()
         else:
             gtk.main_do_event(event)
+
+    def wait(self):
+        """
+        wait until the window is repainted, so borders/shadows
+        don't appear on the image
+        """
+
+        # if it's a window selection, don't wait
+        if self.click_selection:
+            self.screenshot()
+            return
+
+        self.painted = False
+        if self.rgba_support:
+            self.set_opacity(0)
+        self.resize(1, 1)
+        self.move(-10, -10)
+
+        def wait():
+            if not self.painted:
+                return True
+            self.screenshot()
+
+        gobject.timeout_add(10, wait)
 
     def screenshot(self):
         """
@@ -210,9 +229,8 @@ class Escrotum(gtk.Window):
         window = self.root
         width, height = self.width, self.height
 
-        # if no motion(click and release)
         # get screenshot of the selected window
-        if self.height < 5 or self.width < 5:
+        if self.click_selection:
             xid = get_selected_window()
             if not xid:
                 print "Can't get the xid of the selected window"
