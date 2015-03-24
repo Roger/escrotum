@@ -22,7 +22,8 @@ EXIT_CANCEL = 4
 
 class Escrotum(gtk.Window):
     def __init__(self, filename=None, selection=False, xid=None, delay=None,
-                 countdown=False, use_clipboard=False, command=None):
+                 selection_delay=250, countdown=False, use_clipboard=False,
+                 command=None):
         super(Escrotum, self).__init__(gtk.WINDOW_POPUP)
         self.started = False
 
@@ -42,6 +43,7 @@ class Escrotum(gtk.Window):
         self.filename = filename
 
         self.delay = delay
+        self.selection_delay = selection_delay
         self.selection = selection
         self.xid = xid
         self.countdown = countdown
@@ -216,7 +218,10 @@ class Escrotum(gtk.Window):
         def wait():
             if not self.painted:
                 return True
-            self.screenshot()
+            # a delay between hiding selection and the screenshot, looks like
+            # we can't trust in sync between window repaint and composite image
+            # https://github.com/Roger/escrotum/issues/15#issuecomment-85705733
+            gobject.timeout_add(self.selection_delay, self.screenshot)
 
         gobject.timeout_add(10, wait)
 
@@ -372,6 +377,9 @@ def get_options():
                       help='take a screenshot of the xid window')
     parser.add_option('-d', '--delay', default=None, type='int',
                       help='wait DELAY seconds before taking a shot')
+    parser.add_option('--selection-delay', default=250, type='int',
+                      help='delay in milliseconds between selection/screenshot'
+                      )
     parser.add_option('-c', '--countdown', default=False, action="store_true",
                       help='show a countdown before taking the shot '
                            '(requires delay)')
