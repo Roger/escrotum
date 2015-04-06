@@ -377,13 +377,13 @@ def get_options():
         help='interactively choose a window or rectangle with '
              'the mouse, cancels with Esc or Right Click')
     parser.add_argument(
-        '-x', '--xid', default=None, type='int',
+        '-x', '--xid', default=None, type=int,
         help='take a screenshot of the xid window')
     parser.add_argument(
-        '-d', '--delay', default=None, type='int',
+        '-d', '--delay', default=None, type=int,
         help='wait DELAY seconds before taking a shot')
     parser.add_argument(
-        '--selection-delay', default=250, type='int',
+        '--selection-delay', default=250, type=int,
         help='delay in milliseconds between selection/screenshot')
     parser.add_argument(
         '-c', '--countdown', default=False, action="store_true",
@@ -392,7 +392,7 @@ def get_options():
         '-C', '--clipboard', default=False, action="store_true",
         help='store the image on the clipboard')
     parser.add_argument(
-        '-e', '--exec', default=None, type="string", dest="command",
+        '-e', '--exec', default=None, type=str, dest="command",
         help="run the command after the image is taken")
     parser.add_argument(
         'FILENAME', type=str, nargs="?",
@@ -417,8 +417,9 @@ def run():
         daemonize()
 
     Escrotum(filename=args.FILENAME, selection=args.select, xid=args.xid,
-             delay=args.delay, countdown=args.countdown,
-             use_clipboard=args.clipboard, command=args.command)
+             delay=args.delay, selection_delay=args.selection_delay,
+             countdown=args.countdown, use_clipboard=args.clipboard,
+             command=args.command)
 
     try:
         gtk.main()
