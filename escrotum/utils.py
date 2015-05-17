@@ -82,13 +82,13 @@ def daemonize():
     os.dup2(se.fileno(), sys.stderr.fileno())
 
 
-def bgra2rgba(pixels):
+def bgra2rgba(pixels, width, height):
     try:
         # import here because numpy is slow to import
         # and not always needed
         import numpy as np
         HAS_NUMPY = True
-    except ImporError:
+    except ImportError:
         import array
         HAS_NUMPY = False
         print("No numpy support, saving would be slower")

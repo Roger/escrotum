@@ -300,7 +300,7 @@ class Escrotum(gtk.Window):
         stride = img.get_stride()
         pixels = img.get_data()
 
-        data = bgra2rgba(pixels)
+        data = bgra2rgba(pixels, width, height)
 
         new_pb = gtk.gdk.pixbuf_new_from_data(data, gtk.gdk.COLORSPACE_RGB,
                                               True, 8, width, height, stride)
