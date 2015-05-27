@@ -245,16 +245,25 @@ class Escrotum(gtk.Window):
             width, height = window.get_size()
             x = y = 0
 
-        pb = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8, width, height)
-        pb = pb.get_from_drawable(window, window.get_colormap(), x, y, 0, 0,
-                                  width, height)
+        pb = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, width, height)
+        # mask the pixbuf if we have more than one screen
+        if window == self.root and len(self.get_geometry()) > 1:
+            root_width, root_height = window.get_size()
+            pb2 = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8,
+                                 root_width, root_height)
+            pb2 = pb2.get_from_drawable(window, window.get_colormap(),
+                                        x, y, x, y,
+                                        width, height)
+            pb2 = self.mask_pixbuf(pb2, root_width, root_height)
+            pb2.copy_area(x, y, width, height, pb, 0, 0)
+        else:
+            pb = pb.get_from_drawable(window, window.get_colormap(),
+                                      x, y, 0, 0,
+                                      width, height)
+
         if not pb:
             print "Invalid Pixbuf"
             exit(EXIT_INVALID_PIXBUF)
-
-        if window == self.root and len(self.get_geometry()) > 1:
-            pb = self.mask_pixbuf(pb, width, height)
-
         if self.use_clipboard:
             self.save_clipboard(pb)
         else:
