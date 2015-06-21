@@ -8,10 +8,12 @@ def get_selected_window():
     from: http://unix.stackexchange.com/a/16157
     """
 
-    from ctypes import CDLL, c_int, c_uint32, c_uint, byref
+    from ctypes import CDLL, c_int, c_uint32, c_uint, byref, c_void_p
 
     Xlib = CDLL("libX11.so.6")
-    display = Xlib.XOpenDisplay(None)
+    Xlib.XOpenDisplay.restype = c_void_p
+
+    display = c_void_p(Xlib.XOpenDisplay(None))
 
     if display == 0:
         return None
