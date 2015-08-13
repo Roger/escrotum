@@ -12,7 +12,7 @@ Features
 --------
 
 * fullscreen screenshots
-* partial(selection) screenshots
+* partial(selection with optional move/resize) screenshots
 * window screenshot(click to select)
 * screenshot by xid
 * store the image to the clipboard
@@ -26,6 +26,9 @@ Features
       -v, --version             output version information and exit
       -s, --select              interactively choose a window or rectangle with the mouse,
                                 cancels with Esc or Rigth Click
+      -S, --select-and-resize   interactively choose a window or rectangle with the mouse,
+                                move/resize the rectangle if needed, then press Enter to
+                                accept, or press Esc/Right Click to cancel
       -x XID, --xid=XID         take a screenshot of the xid window
 
       -d DELAY, --delay=DELAY   wait DELAY seconds before taking a shot
