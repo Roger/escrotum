@@ -20,13 +20,22 @@ EXIT_INVALID_PIXBUF = 2
 EXIT_CANT_SAVE_IMAGE = 3
 EXIT_CANCEL = 4
 
+# selection states
+SEL_STATE_FREE = 0
+SEL_STATE_DRAWING = 1
+SEL_STATE_MOVING = 2
+SEL_STATE_RESIZING_TOP_RIGHT = 3
+SEL_STATE_RESIZING_BOTTOM_RIGHT = 4
+SEL_STATE_RESIZING_BOTTOM_LEFT = 5
+SEL_STATE_RESIZING_TOP_LEFT = 6
 
 class Escrotum(gtk.Window):
-    def __init__(self, filename=None, selection=False, xid=None, delay=None,
+    def __init__(self, filename=None, selection=False,
+                 selection_resize=False, xid=None, delay=None,
                  selection_delay=250, countdown=False, use_clipboard=False,
                  command=None):
         super(Escrotum, self).__init__(gtk.WINDOW_POPUP)
-        self.started = False
+        self.selection_state = SEL_STATE_FREE
 
         self.command = command
 
@@ -46,6 +55,27 @@ class Escrotum(gtk.Window):
         self.delay = delay
         self.selection_delay = selection_delay
         self.selection = selection
+        self.selection_resize = selection_resize
+        self.cur_cursor = None
+        self.resize_threshold_px = 10
+        self.sel_state_to_handle_func = {
+            SEL_STATE_FREE: self.handle_ss_free,
+            SEL_STATE_DRAWING: self.handle_ss_drawing,
+            SEL_STATE_MOVING: self.handle_ss_moving,
+            SEL_STATE_RESIZING_TOP_RIGHT: self.handle_ss_rz_top_right,
+            SEL_STATE_RESIZING_BOTTOM_RIGHT: self.handle_ss_rz_bottom_right,
+            SEL_STATE_RESIZING_BOTTOM_LEFT: self.handle_ss_rz_bottom_left,
+            SEL_STATE_RESIZING_TOP_LEFT: self.handle_ss_rz_top_left,
+        }
+        self.sel_state_to_cursor = {
+            SEL_STATE_FREE: gtk.gdk.CROSSHAIR,
+            SEL_STATE_DRAWING: gtk.gdk.CROSSHAIR,
+            SEL_STATE_MOVING: gtk.gdk.FLEUR,
+            SEL_STATE_RESIZING_TOP_RIGHT: gtk.gdk.TOP_RIGHT_CORNER,
+            SEL_STATE_RESIZING_BOTTOM_RIGHT: gtk.gdk.BOTTOM_RIGHT_CORNER,
+            SEL_STATE_RESIZING_BOTTOM_LEFT: gtk.gdk.BOTTOM_LEFT_CORNER,
+            SEL_STATE_RESIZING_TOP_LEFT: gtk.gdk.TOP_LEFT_CORNER,
+        }
         self.xid = xid
         self.countdown = countdown
 
@@ -55,7 +85,7 @@ class Escrotum(gtk.Window):
             self.root = gtk.gdk.window_foreign_new(xid)
 
         self.x = self.y = 0
-        self.start_x = self.start_y = 0
+        self.click_x = self.click_y = 0
         self.height = self.width = 0
 
         self.area = gtk.DrawingArea()
@@ -122,21 +152,41 @@ class Escrotum(gtk.Window):
                                         height-2)
         self.draw()
 
+    def grab_pointer(self, cursor):
+        """
+        Grag pointer with a given cursor.
+        """
+
+        if gtk.gdk.pointer_is_grabbed():
+            if cursor == self.cur_cursor:
+                # same cursor: no need to grab again
+                return
+
+            self.ungrab_pointer()
+
+        gtk.gdk.pointer_grab(self.root, event_mask=self.mask,
+                             cursor=gtk.gdk.Cursor(cursor))
+        self.cur_cursor = cursor
+
+    def ungrab_pointer(self):
+        """
+        Ungrab pointer.
+        """
+
+        gtk.gdk.pointer_ungrab()
+
     def grab(self):
         """
         Grab the mouse
         """
 
-        mask = gtk.gdk.BUTTON_PRESS_MASK | gtk.gdk.BUTTON_RELEASE_MASK | \
+        self.mask = gtk.gdk.BUTTON_PRESS_MASK | gtk.gdk.BUTTON_RELEASE_MASK | \
             gtk.gdk.POINTER_MOTION_MASK | gtk.gdk.POINTER_MOTION_HINT_MASK | \
             gtk.gdk.ENTER_NOTIFY_MASK | gtk.gdk.LEAVE_NOTIFY_MASK
 
         self.root.set_events(gtk.gdk.BUTTON_PRESS | gtk.gdk.MOTION_NOTIFY |
                              gtk.gdk.BUTTON_RELEASE)
-
-        gtk.gdk.pointer_grab(self.root, event_mask=mask,
-                             cursor=gtk.gdk.Cursor(gtk.gdk.CROSSHAIR))
-
+        self.grab_pointer(gtk.gdk.CROSSHAIR)
         gtk.gdk.event_handler_set(self.event_handler)
 
     def ungrab(self):
@@ -145,7 +195,7 @@ class Escrotum(gtk.Window):
         """
 
         self.root.set_events(())
-        gtk.gdk.pointer_ungrab()
+        self.ungrab_pointer()
         gtk.gdk.keyboard_ungrab()
 
     @property
@@ -155,32 +205,457 @@ class Escrotum(gtk.Window):
         """
         return self.width < 5 and self.height < 5
 
-    def event_handler(self, event):
+    @property
+    def right_pos(self):
         """
-        Handle mouse events
+        Horizontal position of the rectangle's right side.
         """
 
+        return self.x + self.width
+
+    @property
+    def bottom_pos(self):
+        """
+        Vertical position of the rectangle's bottom side.
+        """
+
+        return self.y + self.height
+
+    def pos_to_rect_is_moving(self, x, y):
+        """
+        Returns True if, given a cursor position, the action to be
+        performed when grabbing should be to move the rectangle.
+        """
+
+        x_cond = x >= self.x and x < self.right_pos
+        y_cond = y >= self.y and y < self.bottom_pos
+
+        return x_cond and y_cond
+
+    def pos_to_rect_is_resizing_right(self, x, y):
+        """
+        Returns True if, given a cursor position, the action to be
+        performed when grabbing should be to resize the rectangle
+        using the right side.
+        """
+
+        rt = self.resize_threshold_px
+        cond = x >= max(self.right_pos - rt, 0) and x < self.right_pos
+
+        return cond
+
+    def pos_to_rect_is_resizing_left(self, x, y):
+        """
+        Returns True if, given a cursor position, the action to be
+        performed when grabbing should be to resize the rectangle
+        using the left side.
+        """
+
+        rt = self.resize_threshold_px
+        cond = x >= max(self.x, 0) and x < self.x + rt
+
+        return cond
+
+    def pos_to_rect_is_resizing_top(self, x, y):
+        """
+        Returns True if, given a cursor position, the action to be
+        performed when grabbing should be to resize the rectangle
+        using the top side.
+        """
+
+        rt = self.resize_threshold_px
+        cond = y >= max(self.y, 0) and y < self.y + rt
+
+        return cond
+
+    def pos_to_rect_is_resizing_bottom(self, x, y):
+        """
+        Returns True if, given a cursor position, the action to be
+        performed when grabbing should be to resize the rectangle
+        using the bottom side.
+        """
+
+        rt = self.resize_threshold_px
+        cond = y >= max(self.bottom_pos - rt, 0) and y < self.bottom_pos
+
+        return cond
+
+    def pos_to_rect_is_resizing_top_right(self, x, y):
+        """
+        Returns True if, given a cursor position, the action to be
+        performed when grabbing should be to resize the rectangle
+        using the top-right corner.
+        """
+
+        t = self.pos_to_rect_is_resizing_top(x, y)
+        r = self.pos_to_rect_is_resizing_right(x, y)
+
+        return t and r
+
+    def pos_to_rect_is_resizing_bottom_right(self, x, y):
+        """
+        Returns True if, given a cursor position, the action to be
+        performed when grabbing should be to resize the rectangle
+        using the bottom-right corner.
+        """
+
+        b = self.pos_to_rect_is_resizing_bottom(x, y)
+        r = self.pos_to_rect_is_resizing_right(x, y)
+
+        return b and r
+
+    def pos_to_rect_is_resizing_bottom_left(self, x, y):
+        """
+        Returns True if, given a cursor position, the action to be
+        performed when grabbing should be to resize the rectangle
+        using the bottom-left corner.
+        """
+
+        b = self.pos_to_rect_is_resizing_bottom(x, y)
+        l = self.pos_to_rect_is_resizing_left(x, y)
+
+        return b and l
+
+    def pos_to_rect_is_resizing_top_left(self, x, y):
+        """
+        Returns True if, given a cursor position, the action to be
+        performed when grabbing should be to resize the rectangle
+        using the top-left corner.
+        """
+
+        t = self.pos_to_rect_is_resizing_top(x, y)
+        l = self.pos_to_rect_is_resizing_left(x, y)
+
+        return t and l
+
+    def pos_to_sel_state(self, x, y):
+        """
+        Returns a selection state in function of a cursor position.
+        """
+
+        if self.pos_to_rect_is_resizing_top_right(x, y):
+            return SEL_STATE_RESIZING_TOP_RIGHT
+        elif self.pos_to_rect_is_resizing_bottom_right(x, y):
+            return SEL_STATE_RESIZING_BOTTOM_RIGHT
+        elif self.pos_to_rect_is_resizing_bottom_left(x, y):
+            return SEL_STATE_RESIZING_BOTTOM_LEFT
+        elif self.pos_to_rect_is_resizing_top_left(x, y):
+            return SEL_STATE_RESIZING_TOP_LEFT
+        elif self.pos_to_rect_is_moving(x, y):
+            return SEL_STATE_MOVING
+
+        # fallback to redraw
+        return SEL_STATE_DRAWING
+
+    def update_cursor(self, x, y):
+        """
+        Update the cursor in selection with resize mode. This function
+        sets the cursor to:
+
+          * a fleur (move)
+          * a corner (resize)
+          * a crosshair (redraw)
+        """
+
+        cursor = self.sel_state_to_cursor[self.pos_to_sel_state(x, y)]
+        self.grab_pointer(cursor)
+
+    def set_sel_state_from_pos(self, x, y):
+        """
+        Sets the current selection state according to the
+        cursor position.
+        """
+
+        self.selection_state = self.pos_to_sel_state(x, y)
+
+    def get_xy_click_diffs(self, x, y):
+        """
+        Returns the X and Y differences from the last clicked point.
+        """
+
+        return x - self.click_x, y - self.click_y
+
+    def rect_resize_top(self, y):
+        """
+        Resizes the rectangle's top side.
+        """
+
+        dist_x, dist_y = self.get_xy_click_diffs(0, y)
+        new_y = self.start_rect_y + dist_y
+
+        # avoid:
+        #
+        #              #########
+        # .............#########.......
+        # .............#########.......
+        # .............................
+        # .............................
+        # .............................
+        if new_y < 0:
+            dist_y = -self.start_rect_y
+            new_y = self.start_rect_y + dist_y
+
+        new_height = self.start_rect_height - dist_y
+
+        # make sure the rectangle does not become too small
+        if new_height < self.resize_threshold_px:
+            new_height = self.resize_threshold_px
+            new_y = self.start_rect_bottom - self.resize_threshold_px
+
+        self.height = new_height
+        self.y = new_y
+
+    def rect_resize_bottom(self, y):
+        """
+        Resizes the rectangle's bottom side.
+        """
+
+        root_size = self.root.get_size()
+        dist_x, dist_y = self.get_xy_click_diffs(0, y)
+
+        # avoid:
+        #
+        # .............................
+        # .............................
+        # .............................
+        # ........######...............
+        # ........######...............
+        #         ######
+        if self.start_rect_bottom + dist_y > root_size[1]:
+            new_height = root_size[1] - self.start_rect_y
+        else:
+            new_height = self.start_rect_height + dist_y
+
+        # make sure the rectangle does not become too small
+        if new_height < self.resize_threshold_px:
+            new_height = self.resize_threshold_px
+
+        self.height = new_height
+
+    def rect_resize_right(self, x):
+        """
+        Resizes the rectangle's right side.
+        """
+
+        root_size = self.root.get_size()
+        dist_x, dist_y = self.get_xy_click_diffs(x, 0)
+
+        # avoid:
+        #
+        # .............................
+        # ..........................######
+        # ..........................######
+        # .............................
+        # .............................
+        if self.start_rect_right + dist_x > root_size[0]:
+            new_width = root_size[0] - self.start_rect_x
+        else:
+            new_width = self.start_rect_width + dist_x
+
+        # make sure the rectangle does not become too small
+        if new_width < self.resize_threshold_px:
+            new_width = self.resize_threshold_px
+
+        self.width = new_width
+
+    def rect_resize_left(self, x):
+        """
+        Resizes the rectangle's left side.
+        """
+
+        dist_x, dist_y = self.get_xy_click_diffs(x, 0)
+        new_x = self.start_rect_x + dist_x
+
+        # avoid:
+        #
+        #     .............................
+        #     .............................
+        #   #####..........................
+        #   #####..........................
+        #     .............................
+        if new_x < 0:
+            dist_x = -self.start_rect_x
+            new_x = self.start_rect_x + dist_x
+
+        new_width = self.start_rect_width - dist_x
+
+        # make sure the rectangle does not become too small
+        if new_width < self.resize_threshold_px:
+            new_width = self.resize_threshold_px
+            new_x = self.start_rect_right - self.resize_threshold_px
+
+        self.width = new_width
+        self.x = new_x
+
+    def handle_ss_free(self, x, y):
+        """
+        Handles the free selection state.
+        """
+
+        # only update cursor in free state: cursor is
+        # "locked" to its initial value when "grabbing"
+        # since the selection state won't change until
+        # the mouse button is released
+        self.update_cursor(x, y)
+
+    def handle_ss_drawing(self, x, y):
+        """
+        Handles the drawing selection state.
+        """
+
+        self.set_rect_size(x, y)
+
+    def handle_ss_moving(self, x, y):
+        """
+        Handles the moving selection state.
+        """
+
+        root_size = self.root.get_size()
+        dist_x, dist_y = self.get_xy_click_diffs(x, y)
+        new_x = self.start_rect_x + dist_x
+        new_y = self.start_rect_y + dist_y
+
+        # avoid:
+        #
+        #     .............................
+        #     .............................
+        #   #####..........................
+        #   #####..........................
+        #     .............................
+        if new_x < 0:
+            new_x = 0
+
+        # avoid:
+        #
+        # .............................
+        # ..........................######
+        # ..........................######
+        # .............................
+        # .............................
+        if new_x + self.width > root_size[0]:
+            new_x = root_size[0] - self.width
+
+        # avoid:
+        #
+        #              #########
+        # .............#########.......
+        # .............#########.......
+        # .............................
+        # .............................
+        # .............................
+        if new_y < 0:
+            new_y = 0
+
+        # avoid:
+        #
+        # .............................
+        # .............................
+        # .............................
+        # ........######...............
+        # ........######...............
+        #         ######
+        if new_y + self.height > root_size[1]:
+            new_y = root_size[1] - self.height
+
+        self.x = new_x
+        self.y = new_y
+
+    def handle_ss_rz_top_right(self, x, y):
+        """
+        Handles the top-right resizing selection state.
+        """
+
+        self.rect_resize_top(y)
+        self.rect_resize_right(x)
+
+    def handle_ss_rz_bottom_right(self, x, y):
+        """
+        Handles the bottom-right resizing selection state.
+        """
+
+        self.rect_resize_bottom(y)
+        self.rect_resize_right(x)
+
+    def handle_ss_rz_bottom_left(self, x, y):
+        """
+        Handles the bottom-left resizing selection state.
+        """
+
+        self.rect_resize_bottom(y)
+        self.rect_resize_left(x)
+
+    def handle_ss_rz_top_left(self, x, y):
+        """
+        Handles the top-left resizing selection state.
+        """
+
+        self.rect_resize_top(y)
+        self.rect_resize_left(x)
+
+    def event_handler(self, event):
+        """
+        Handle mouse/keyboard events
+        """
         if event.type == gtk.gdk.BUTTON_PRESS:
+            x = int(event.x)
+            y = int(event.y)
+
             if event.button != 1:
                 print "Canceled by the user"
                 exit(EXIT_CANCEL)
+
             # grab the keyboard only when selection started
             gtk.gdk.keyboard_grab(self.root)
-            self.started = True
-            self.start_x = int(event.x)
-            self.start_y = int(event.y)
-            self.move(self.x, self.y)
+
+            # keep initial click point
+            self.click_x = x
+            self.click_y = y
+
+            if self.selection_resize:
+                # set selection state depending on click position
+                self.set_sel_state_from_pos(x, y)
+
+                # keep initial settings needed for resizing/moving
+                self.start_rect_x = self.x
+                self.start_rect_right = self.right_pos
+                self.start_rect_y = self.y
+                self.start_rect_bottom = self.bottom_pos
+                self.start_rect_width = self.width
+                self.start_rect_height = self.height
+
+                if self.selection_state == SEL_STATE_DRAWING:
+                    # draw/redraw
+                    self.height = 0
+                    self.width = 0
+                    self.x = x
+                    self.y = y
+            else:
+                self.move(self.x, self.y)
+                self.selection_state = SEL_STATE_DRAWING
 
         elif event.type == gtk.gdk.KEY_RELEASE:
             if gtk.gdk.keyval_name(event.keyval) == "Escape":
                 print "Canceled by the user"
                 exit(EXIT_CANCEL)
 
-        elif event.type == gtk.gdk.MOTION_NOTIFY:
-            if not self.started:
-                return
+            if self.selection_resize:
+                if gtk.gdk.keyval_name(event.keyval) == "Return":
+                    # capture
+                    self.ungrab()
+                    self.wait()
 
-            self.set_rect_size(event)
+        elif event.type == gtk.gdk.MOTION_NOTIFY:
+            x = int(event.x)
+            y = int(event.y)
+
+            if self.selection_resize:
+                self.sel_state_to_handle_func[self.selection_state](x, y)
+            else:
+                if self.selection_state == SEL_STATE_FREE:
+                    return
+
+                self.set_rect_size(x, y)
+
             self.draw()
 
             if self.width > 3 and self.height > 3:
@@ -189,13 +664,26 @@ class Escrotum(gtk.Window):
                 self.show_all()
 
         elif event.type == gtk.gdk.BUTTON_RELEASE:
-            if not self.started:
+            x = int(event.x)
+            y = int(event.y)
+
+            if self.selection_state == SEL_STATE_FREE:
                 return
 
-            self.set_rect_size(event)
+            if self.selection_resize:
+                if self.selection_state == SEL_STATE_DRAWING:
+                    if self.click_selection:
+                        # not possible to move/resize when clicking
+                        self.set_rect_size(x, y)
+                        self.ungrab()
+                        self.wait()
 
-            self.ungrab()
-            self.wait()
+                # mouse button released: back to free state
+                self.selection_state = SEL_STATE_FREE
+            else:
+                self.set_rect_size(x, y)
+                self.ungrab()
+                self.wait()
         else:
             gtk.main_do_event(event)
 
@@ -371,27 +859,27 @@ class Escrotum(gtk.Window):
             subprocess.call(command, shell=True)
         exit()
 
-    def set_rect_size(self, event):
+    def set_rect_size(self, ev_x, ev_y):
         """
-        Set the window size
+        Set the window size when drawing
         """
 
-        if event.x < self.start_x:
-            x = int(event.x)
-            width = self.start_x - x
+        if ev_x < self.click_x:
+            x = ev_x
+            width = self.click_x - x
         else:
-            x = self.start_x
-            width = int(event.x) - self.start_x
+            x = self.click_x
+            width = ev_x - self.click_x
 
         self.x = x
         self.width = width
 
-        if event.y < self.start_y:
-            y = int(event.y)
-            height = self.start_y - y
+        if ev_y < self.click_y:
+            y = ev_y
+            height = self.click_y - y
         else:
-            height = int(event.y) - self.start_y
-            y = self.start_y
+            height = ev_y - self.click_y
+            y = self.click_y
 
         self.y = y
         self.height = height
@@ -436,6 +924,11 @@ def get_options():
         help='interactively choose a window or rectangle with '
              'the mouse, cancels with Esc or Right Click')
     parser.add_argument(
+        '-S', '--select-and-resize', default=False, action='store_true',
+        help='interactively choose a window or rectangle with '
+             'the mouse, move/resize the rectangle if needed, then '
+             'press Enter to accept, or press Esc/Right Click to cancel')
+    parser.add_argument(
         '-x', '--xid', default=None, type=int,
         help='take a screenshot of the xid window')
     parser.add_argument(
@@ -472,10 +965,14 @@ def run():
         print "Countdown parameter requires delay"
         exit()
 
-    if args.clipboard:
-        daemonize()
+    if args.select and args.select_and_resize:
+        print "Options -s and -S cannot be enabled at the same time"
+        exit()
 
-    Escrotum(filename=args.FILENAME, selection=args.select, xid=args.xid,
+    selection = args.select or args.select_and_resize
+
+    Escrotum(filename=args.FILENAME, selection=selection,
+             selection_resize=args.select_and_resize, xid=args.xid,
              delay=args.delay, selection_delay=args.selection_delay,
              countdown=args.countdown, use_clipboard=args.clipboard,
              command=args.command)
