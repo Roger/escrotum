@@ -12,6 +12,9 @@ import gobject
 
 from utils import get_selected_window, daemonize, bgra2rgba
 
+from ffmpeg import Ffmpeg
+from keybinding import GrabKeyboard
+
 
 __version__ = "0.2.1"
 
@@ -19,12 +22,13 @@ EXIT_XID_ERROR = 1
 EXIT_INVALID_PIXBUF = 2
 EXIT_CANT_SAVE_IMAGE = 3
 EXIT_CANCEL = 4
+EXIT_FFMPEG_ERROR = 5
 
 
 class Escrotum(gtk.Window):
     def __init__(self, filename=None, selection=False, xid=None, delay=None,
                  selection_delay=250, countdown=False, use_clipboard=False,
-                 command=None):
+                 command=None, record=False):
         super(Escrotum, self).__init__(gtk.WINDOW_POPUP)
         self.started = False
 
@@ -42,12 +46,18 @@ class Escrotum(gtk.Window):
             self.set_opacity(0.4)
 
         self.filename = filename
+        if not filename:
+            if record:
+                self.filename = "%Y-%m-%d-%H%M%S_$wx$h_escrotum.webm"
+            else:
+                self.filename = "%Y-%m-%d-%H%M%S_$wx$h_escrotum.png"
 
         self.delay = delay
         self.selection_delay = selection_delay
         self.selection = selection
         self.xid = xid
         self.countdown = countdown
+        self.record = record
 
         if not xid:
             self.root = gtk.gdk.get_default_root_window()
@@ -89,7 +99,7 @@ class Escrotum(gtk.Window):
             self.grab()
         else:
             self.width, self.height = self.root.get_size()
-            self.screenshot()
+            self.capture()
 
     def draw(self):
         self.painted = True
@@ -207,7 +217,7 @@ class Escrotum(gtk.Window):
 
         # if it's a window selection, don't wait
         if self.click_selection:
-            self.screenshot()
+            self.capture()
             return
 
         self.painted = False
@@ -222,20 +232,20 @@ class Escrotum(gtk.Window):
             # a delay between hiding selection and the screenshot, looks like
             # we can't trust in sync between window repaint and composite image
             # https://github.com/Roger/escrotum/issues/15#issuecomment-85705733
-            gobject.timeout_add(self.selection_delay, self.screenshot)
+            gobject.timeout_add(self.selection_delay, self.capture)
 
         gobject.timeout_add(10, wait)
 
-    def screenshot(self):
+    def capture(self):
         """
-        Capture the screenshot based on the window size or the selected window
+        Capture the image/video based on the window size or the selected window
         """
 
         x, y = (self.x, self.y)
         window = self.root
         width, height = self.width, self.height
 
-        # get screenshot of the selected window
+        # get image/video of the selected window
         if self.click_selection:
             xid = get_selected_window()
             if not xid:
@@ -245,6 +255,19 @@ class Escrotum(gtk.Window):
             width, height = window.get_size()
             x = y = 0
 
+        if self.record:
+            self.capture_video(x, y, width, height)
+        else:
+            self.capture_image(x, y, width, height, window)
+
+    def on_exit(self, width, height):
+        if self.command:
+            command = self.command.replace("$f", self.filename)
+            command = self._expand_argument(width, height, command)
+            subprocess.call(command, shell=True)
+        exit()
+
+    def capture_image(self, x, y, width, height, window):
         pb = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, width, height)
         # mask the pixbuf if we have more than one screen
         if window == self.root and len(self.get_geometry()) > 1:
@@ -268,6 +291,19 @@ class Escrotum(gtk.Window):
             self.save_clipboard(pb)
         else:
             self.save_file(pb, width, height)
+        self.on_exit(width, height)
+
+    def capture_video(self, x, y, width, height):
+        ffmpeg = Ffmpeg(x, y, width, height, self.filename)
+        if not ffmpeg.start():
+            print "ffmpeg can't record video"
+            exit(EXIT_FFMPEG_ERROR)
+        print "Recording video, stop with Ctrl-Alt-s"
+
+        def wait():
+            ffmpeg.stop()
+            self.on_exit(width, height)
+        GrabKeyboard(wait)
 
     def get_geometry(self):
         monitors = self.screen.get_n_monitors()
@@ -349,9 +385,6 @@ class Escrotum(gtk.Window):
         Stores the pixbuf as a file
         """
 
-        if not self.filename:
-            self.filename = "%Y-%m-%d-%H%M%S_$wx$h_escrotum.png"
-
         self.filename = self._expand_argument(width, height, self.filename)
 
         filetype = "png"
@@ -364,12 +397,6 @@ class Escrotum(gtk.Window):
         except Exception, error:
             print error
             exit(EXIT_CANT_SAVE_IMAGE)
-
-        if self.command:
-            command = self.command.replace("$f", self.filename)
-            command = self._expand_argument(width, height, command)
-            subprocess.call(command, shell=True)
-        exit()
 
     def set_rect_size(self, event):
         """
@@ -421,6 +448,7 @@ def get_options():
   2 invalid pixbuf
   3 can't save the image
   4 user canceled selection
+  5 error with ffmpeg
 """
 
     parser = argparse.ArgumentParser(
@@ -454,6 +482,9 @@ def get_options():
         '-e', '--exec', default=None, type=str, dest="command",
         help="run the command after the image is taken")
     parser.add_argument(
+        '-r', '--record', default=False, action="store_true",
+        help="record video")
+    parser.add_argument(
         'FILENAME', type=str, nargs="?",
         help="image filename, default is "
              "%%Y-%%m-%%d-%%H%%M%%S_$wx$h_escrotum.png")
@@ -478,7 +509,7 @@ def run():
     Escrotum(filename=args.FILENAME, selection=args.select, xid=args.xid,
              delay=args.delay, selection_delay=args.selection_delay,
              countdown=args.countdown, use_clipboard=args.clipboard,
-             command=args.command)
+             command=args.command, record=args.record)
 
     try:
         gtk.main()

@@ -107,3 +107,14 @@ def bgra2rgba(pixels, width, height):
                 i = (width * y + x) * 4
                 data[i + 0], data[i + 2] = data[i + 2], data[i + 0]
     return data.tostring()
+
+
+def cmd_exists(cmd):
+    """
+    Check if command exists on PATH
+    from: http://stackoverflow.com/a/28909933/4437679
+    """
+    return any(
+        os.access(os.path.join(path, cmd), os.X_OK)
+        for path in os.environ["PATH"].split(os.pathsep)
+    )
