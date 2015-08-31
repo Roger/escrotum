@@ -16,6 +16,9 @@ from gi.repository import GLib as glib
 import cairo
 
 from util import get_selected_window, get_window_from_xid, daemonize, bgra2rgba
+from ffmpeg import Ffmpeg
+from keybinding import GrabKeyboard
+
 
 __version__ = "0.2.1"
 
@@ -24,13 +27,15 @@ EXIT_INVALID_PIXBUF = 2
 EXIT_CANT_SAVE_IMAGE = 3
 EXIT_CANCEL = 4
 EXIT_CANT_GRAB_MOUSE = 5
+EXIT_FFMPEG_ERROR = 6
 
 
 class Escrotum(gtk.Dialog):
     def __init__(self, filename=None, selection=False, xid=None, delay=None,
                  selection_delay=250, countdown=False, use_clipboard=False,
-                 command=None):
+                 command=None, record=False):
         super(Escrotum, self).__init__(type=gtk.WindowType.POPUP)
+
         self.started = False
         gdk.event_handler_set(self.event_handler)
 
@@ -49,12 +54,20 @@ class Escrotum(gtk.Dialog):
             self.set_visual(self.visual)
 
         self.filename = filename
+        if not filename:
+            ext = "webm" if record else "png"
+            self.filename = f"%Y-%m-%d-%H%M%S_$wx$h_escrotum.{ext}"
+
+        if record and not self.filename.endswith(".webm"):
+            print("Video recording only supports webm")
+            exit(EXIT_FFMPEG_ERROR)
 
         self.delay = delay
         self.selection_delay = selection_delay
         self.selection = selection
         self.xid = xid
         self.countdown = countdown
+        self.record = record
 
         if not xid:
             self.root = gdk.get_default_root_window()
@@ -95,7 +108,7 @@ class Escrotum(gtk.Dialog):
             self.grab()
         else:
             self.width, self.height = self.root.get_width(), self.root.get_height()
-            self.screenshot()
+            self.capture()
 
     def draw(self):
         self.painted = True
@@ -222,7 +235,7 @@ class Escrotum(gtk.Dialog):
 
         # if it's a window selection, don't wait
         if self.click_selection:
-            self.screenshot()
+            self.capture()
             return
 
         self.painted = False
@@ -237,20 +250,20 @@ class Escrotum(gtk.Dialog):
             # a delay between hiding selection and the screenshot, looks like
             # we can't trust in sync between window repaint and composite image
             # https://github.com/Roger/escrotum/issues/15#issuecomment-85705733
-            glib.timeout_add(self.selection_delay, self.screenshot)
+            glib.timeout_add(self.selection_delay, self.capture)
 
         glib.timeout_add(10, wait)
 
-    def screenshot(self):
+    def capture(self):
         """
-        Capture the screenshot based on the window size or the selected window
+        Capture the image/video based on the window size or the selected window
         """
 
         x, y = (self.x, self.y)
         window = self.root
         width, height = self.width, self.height
 
-        # get screenshot of the selected window
+        # get image/video of the selected window
         if self.click_selection:
             xid = get_selected_window()
             if not xid:
@@ -259,6 +272,19 @@ class Escrotum(gtk.Dialog):
             selected_window = get_window_from_xid(xid)
             x, y, width, height = selected_window.get_geometry()
 
+        if self.record:
+            self.capture_video(x, y, width, height)
+        else:
+            self.capture_image(x, y, width, height, window)
+
+    def on_exit(self, width, height):
+        if self.command:
+            command = self.command.replace("$f", self.filename)
+            command = self._expand_argument(width, height, command)
+            subprocess.call(command, shell=True)
+        exit()
+
+    def capture_image(self, x, y, width, height, window):
         pb = Pixbuf.Pixbuf.new(Pixbuf.Colorspace.RGB, True, 8, width, height)
         # mask the pixbuf if we have more than one screen
         root_width, root_height = window.get_width(), window.get_height()
@@ -275,6 +301,7 @@ class Escrotum(gtk.Dialog):
             self.save_clipboard(pb)
         else:
             self.save_file(pb, width, height)
+
         if self.command:
             self.call_exec(width, height)
 
@@ -284,6 +311,20 @@ class Escrotum(gtk.Dialog):
         else:
             # exit here instead of inside save_file
             exit()
+        self.on_exit(width, height)
+
+    def capture_video(self, x, y, width, height):
+        filename = self._expand_argument(width, height, self.filename)
+        ffmpeg = Ffmpeg(x, y, width, height, filename)
+        if not ffmpeg.start():
+            print("ffmpeg can't record video")
+            exit(EXIT_FFMPEG_ERROR)
+        print("Recording video, stop with Ctrl-Alt-s")
+
+        def wait():
+            ffmpeg.stop()
+            self.on_exit(width, height)
+        GrabKeyboard(wait)
 
     def get_monitor_geometries(self):
         monitors = [self.display.get_monitor(m)
@@ -365,9 +406,6 @@ class Escrotum(gtk.Dialog):
         Stores the pixbuf as a file
         """
 
-        if not self.filename:
-            self.filename = "%Y-%m-%d-%H%M%S_$wx$h_escrotum.png"
-
         self.filename = self._expand_argument(width, height, self.filename)
 
         filetype = "png"
@@ -438,6 +476,7 @@ def get_options():
   3 can't save the image
   4 user canceled selection
   5 can't grab the mouse
+  6 error with ffmpeg
 """
 
     parser = argparse.ArgumentParser(
@@ -471,6 +510,9 @@ def get_options():
         '-e', '--exec', default=None, type=str, dest="command",
         help="run the command after the image is taken")
     parser.add_argument(
+        '-r', '--record', default=False, action="store_true",
+        help="record video")
+    parser.add_argument(
         'FILENAME', type=str, nargs="?",
         help="image filename, default is "
              "%%Y-%%m-%%d-%%H%%M%%S_$wx$h_escrotum.png")
@@ -492,7 +534,7 @@ def run():
     Escrotum(filename=args.FILENAME, selection=args.select, xid=args.xid,
              delay=args.delay, selection_delay=args.selection_delay,
              countdown=args.countdown, use_clipboard=args.clipboard,
-             command=args.command)
+             command=args.command, record=args.record)
 
     try:
         gtk.main()
