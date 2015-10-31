@@ -5,6 +5,7 @@ import sys
 import datetime
 import subprocess
 import argparse
+import uuid
 
 import gtk
 import cairo
@@ -341,6 +342,7 @@ class Escrotum(gtk.Window):
         string = datetime.datetime.now().strftime(string)
         string = string.replace("$w", str(width))
         string = string.replace("$h", str(height))
+        string = string.replace("$u", str(uuid.uuid4()))
         string = os.path.expanduser(string)
         return string
 
@@ -412,6 +414,7 @@ def get_options():
   \t$f image path/filename (ignored when used in the filename)
   \t$w image width
   \t$h image height
+  \t$u random uuid
   Example:
   \tescrotum '%Y-%m-%d_$wx$h_escrotum.png'
   \tCreates a file called something like 2013-06-17-082335_263x738_escrotum.png

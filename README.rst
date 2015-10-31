@@ -41,6 +41,7 @@ Features
       The following specifiers are recognised:
             $w image width
             $h image height
+            $u random uuid
       Example:
             escrotum '%Y-%m-%d_$wx$h_scrotum.png'
             Creates a file called something like 2013-06-17-082335_263x738_escrotum.png
