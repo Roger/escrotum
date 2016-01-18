@@ -3,6 +3,7 @@
 import os
 import sys
 import datetime
+from time import time
 import subprocess
 import argparse
 
@@ -23,7 +24,8 @@ EXIT_CANCEL = 4
 
 class Escrotum(gtk.Window):
     def __init__(self, filename=None, selection=False, xid=None, delay=None,
-                 selection_delay=250, countdown=False, use_clipboard=False,
+                 selection_delay=250, countdown=False, repeat=False,
+                 on_key_press=False, use_clipboard=False,
                  command=None):
         super(Escrotum, self).__init__(gtk.WINDOW_POPUP)
         self.started = False
@@ -49,6 +51,16 @@ class Escrotum(gtk.Window):
         self.xid = xid
         self.countdown = countdown
 
+        if repeat:
+            if not delay:
+                print "--delay is needed for --repeat"
+                exit()
+            self.repeat = repeat
+            self.repeat_delay = delay
+        else: self.repeat = None
+
+        self.on_key_press = on_key_press
+
         if not xid:
             self.root = gtk.gdk.get_default_root_window()
         else:
@@ -69,6 +81,7 @@ class Escrotum(gtk.Window):
             if countdown:
                 sys.stdout.write("Taking shot in ..%s" % delay)
                 sys.stdout.flush()
+            self.delay -= 1
             gobject.timeout_add(1000, self.start)
         else:
             self.start()
@@ -227,6 +240,24 @@ class Escrotum(gtk.Window):
         gobject.timeout_add(10, wait)
 
     def screenshot(self):
+        if self.repeat:
+            self.repeat -= 1
+            self.screenshot2()
+            gobject.timeout_add(1000 * self.repeat_delay, self.screenshot2)
+        elif self.on_key_press:
+            from pykeylogger import keylogger
+            done = lambda: False
+            def start_screenshot(t, modifiers, keys):
+                if keys:
+                    self.screenshot2()
+            try:
+                keylogger.log(done, start_screenshot)
+            except:
+                exit()
+        else:
+            self.screenshot2()
+
+    def screenshot2(self):
         """
         Capture the screenshot based on the window size or the selected window
         """
@@ -268,6 +299,12 @@ class Escrotum(gtk.Window):
             self.save_clipboard(pb)
         else:
             self.save_file(pb, width, height)
+
+        if self.repeat:
+            self.repeat -= 1
+            return True
+        else:
+            return False
 
     def get_geometry(self):
         monitors = self.screen.get_n_monitors()
@@ -349,10 +386,13 @@ class Escrotum(gtk.Window):
         Stores the pixbuf as a file
         """
 
-        if not self.filename:
-            self.filename = "%Y-%m-%d-%H%M%S_$wx$h_escrotum.png"
+        if not self.repeat and not self.on_key_press:
+            if not self.filename:
+                self.filename = "%Y-%m-%d-%H%M%S_$wx$h_escrotum.png"
 
-        self.filename = self._expand_argument(width, height, self.filename)
+            self.filename = self._expand_argument(width, height, self.filename)
+        else:
+            self.filename = "capture/screenshot_" + str(int(time())) + ".png"
 
         filetype = "png"
         if "." in self.filename:
@@ -369,7 +409,9 @@ class Escrotum(gtk.Window):
             command = self.command.replace("$f", self.filename)
             command = self._expand_argument(width, height, command)
             subprocess.call(command, shell=True)
-        exit()
+
+        if not self.repeat and not self.on_key_press:
+            exit()
 
     def set_rect_size(self, event):
         """
@@ -448,6 +490,12 @@ def get_options():
         '-c', '--countdown', default=False, action="store_true",
         help='show a countdown before taking the shot (requires delay)')
     parser.add_argument(
+        '-r', '--repeat', default=False, type=int,
+        help='number of screenshots to take, waiting DELAY each time')
+    parser.add_argument(
+        '-k', '--on-key-press', default=False, action='store_true',
+        help='make screenshot on every (visible) key press (only Linux)')
+    parser.add_argument(
         '-C', '--clipboard', default=False, action="store_true",
         help='store the image on the clipboard')
     parser.add_argument(
@@ -477,7 +525,8 @@ def run():
 
     Escrotum(filename=args.FILENAME, selection=args.select, xid=args.xid,
              delay=args.delay, selection_delay=args.selection_delay,
-             countdown=args.countdown, use_clipboard=args.clipboard,
+             countdown=args.countdown, repeat=args.repeat,
+             on_key_press=args.on_key_press, use_clipboard=args.clipboard,
              command=args.command)
 
     try:
