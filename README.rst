@@ -16,34 +16,61 @@ Features
 * window screenshot(click to select)
 * screenshot by xid
 * store the image to the clipboard
+* make multiple screenshots (every x seconds)
 
 ::
 
-    Usage: escrotum [filename]
+  usage: escrotum [-h] [-v] [-s] [-x XID] [-d DELAY]
+                  [--selection-delay SELECTION_DELAY] [-c] [-r REPEAT] [-k] [-C]
+                  [-e COMMAND]
+                  [FILENAME]
 
-    Options:
-      -h, --help                show this help message and exit
-      -v, --version             output version information and exit
-      -s, --select              interactively choose a window or rectangle with the mouse,
-                                cancels with Esc or Rigth Click
-      -x XID, --xid=XID         take a screenshot of the xid window
+  Minimalist screenshot capture program inspired by scrot.
 
-      -d DELAY, --delay=DELAY   wait DELAY seconds before taking a shot
-      -c, --countdown           show a countdown before taking the shot
-      -C, --clipboard           store the image on the clipboard
-      SPECIAL STRINGS
-      filename parameters can take format specifiers
-      that are expanded by escrotum when encountered.
-      There are two types of format specifier. Characters preceded by a '%'
-      are interpretted by strftime(2). See man strftime for examples.
-      These options may be used to refer to the current date and time.
-      The second kind are internal to escrotum  and are prefixed by '$'
-      The following specifiers are recognised:
-            $w image width
-            $h image height
-      Example:
-            escrotum '%Y-%m-%d_$wx$h_scrotum.png'
-            Creates a file called something like 2013-06-17-082335_263x738_escrotum.png
+  positional arguments:
+    FILENAME              image filename, default is
+                          %Y-%m-%d-%H%M%S_$wx$h_escrotum.png
+
+  optional arguments:
+    -h, --help            show this help message and exit
+    -v, --version         output version information and exit
+    -s, --select          interactively choose a window or rectangle with the
+                          mouse, cancels with Esc or Right Click
+    -x XID, --xid XID     take a screenshot of the xid window
+    -d DELAY, --delay DELAY
+                          wait DELAY seconds before taking a shot
+    --selection-delay SELECTION_DELAY
+                          delay in milliseconds between selection/screenshot
+    -c, --countdown       show a countdown before taking the shot (requires
+                          delay)
+    -r REPEAT, --repeat REPEAT
+                          number of screenshots to take, waiting DELAY each time
+    -C, --clipboard       store the image on the clipboard
+    -e COMMAND, --exec COMMAND
+                          run the command after the image is taken
+
+    SPECIAL STRINGS
+    Both the --exec and filename parameters can take format specifiers
+    that are expanded by escrotum when encountered.
+
+    There are two types of format specifier. Characters preceded by a '%'
+    are interpreted by strftime(2). See man strftime for examples.
+    These options may be used to refer to the current date and time.
+
+    The second kind are internal to escrotum and are prefixed by '$'
+    The following specifiers are recognised:
+          $f image path/filename (ignored when used in the filename)
+          $w image width
+          $h image height
+    Example:
+          escrotum '%Y-%m-%d_$wx$h_escrotum.png'
+          Creates a file called something like 2013-06-17-082335_263x738_escrotum.png
+
+    EXIT STATUS CODES
+    1 can't get the window by xid
+    2 invalid pixbuf
+    3 can't save the image
+    4 user canceled selection
 
 Install
 -------
