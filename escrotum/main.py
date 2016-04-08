@@ -19,6 +19,7 @@ EXIT_XID_ERROR = 1
 EXIT_INVALID_PIXBUF = 2
 EXIT_CANT_SAVE_IMAGE = 3
 EXIT_CANCEL = 4
+EXIT_CANT_GRAB_MOUSE = 5
 
 
 class Escrotum(gtk.Window):
@@ -134,9 +135,12 @@ class Escrotum(gtk.Window):
         self.root.set_events(gtk.gdk.BUTTON_PRESS | gtk.gdk.MOTION_NOTIFY |
                              gtk.gdk.BUTTON_RELEASE)
 
-        gtk.gdk.pointer_grab(self.root, event_mask=mask,
-                             cursor=gtk.gdk.Cursor(gtk.gdk.CROSSHAIR))
+        status = gtk.gdk.pointer_grab(self.root, event_mask=mask,
+                                      cursor=gtk.gdk.Cursor(gtk.gdk.CROSSHAIR))
 
+        if status != gtk.gdk.GRAB_SUCCESS:
+            print "Can't grab the mouse"
+            exit(EXIT_CANT_GRAB_MOUSE)
         gtk.gdk.event_handler_set(self.event_handler)
 
     def ungrab(self):
@@ -421,6 +425,7 @@ def get_options():
   2 invalid pixbuf
   3 can't save the image
   4 user canceled selection
+  5 can't grab the mouse
 """
 
     parser = argparse.ArgumentParser(
