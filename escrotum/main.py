@@ -245,25 +245,20 @@ class Escrotum(gtk.Window):
             if not xid:
                 print "Can't get the xid of the selected window"
                 exit(EXIT_XID_ERROR)
-            window = gtk.gdk.window_foreign_new(xid)
-            width, height = window.get_size()
-            x = y = 0
+            selected_window = gtk.gdk.window_foreign_new(xid)
+            width, height = selected_window.get_size()
+            x, y = selected_window.get_origin()
 
         pb = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, width, height)
         # mask the pixbuf if we have more than one screen
-        if window == self.root and len(self.get_geometry()) > 1:
-            root_width, root_height = window.get_size()
-            pb2 = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8,
-                                 root_width, root_height)
-            pb2 = pb2.get_from_drawable(window, window.get_colormap(),
-                                        x, y, x, y,
-                                        width, height)
-            pb2 = self.mask_pixbuf(pb2, root_width, root_height)
-            pb2.copy_area(x, y, width, height, pb, 0, 0)
-        else:
-            pb = pb.get_from_drawable(window, window.get_colormap(),
-                                      x, y, 0, 0,
-                                      width, height)
+        root_width, root_height = window.get_size()
+        pb2 = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8,
+                             root_width, root_height)
+        pb2 = pb2.get_from_drawable(window, window.get_colormap(),
+                                    x, y, x, y,
+                                    width, height)
+        pb2 = self.mask_pixbuf(pb2, root_width, root_height)
+        pb2.copy_area(x, y, width, height, pb, 0, 0)
 
         if not pb:
             print "Invalid Pixbuf"
