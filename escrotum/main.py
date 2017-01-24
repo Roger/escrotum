@@ -267,6 +267,12 @@ class Escrotum(gtk.Window):
             self.save_clipboard(pb)
         else:
             self.save_file(pb, width, height)
+        if self.command:
+            self.call_exec(width, height)
+
+        # daemonize here so we don't mess with the CWD on subprocess
+        if self.use_clipboard:
+            daemonize()
 
     def get_geometry(self):
         monitors = self.screen.get_n_monitors()
@@ -363,12 +369,13 @@ class Escrotum(gtk.Window):
         except Exception, error:
             print error
             exit(EXIT_CANT_SAVE_IMAGE)
-
-        if self.command:
-            command = self.command.replace("$f", self.filename)
-            command = self._expand_argument(width, height, command)
-            subprocess.call(command, shell=True)
         exit()
+
+    def call_exec(self, width, height):
+        filename = '[CLIPBOARD]' if self.use_clipboard else self.filename
+        command = self.command.replace("$f", filename)
+        command = self._expand_argument(width, height, command)
+        subprocess.call(command, shell=True)
 
     def set_rect_size(self, event):
         """
@@ -471,9 +478,6 @@ def run():
     if args.countdown and not args.delay:
         print "Countdown parameter requires delay"
         exit()
-
-    if args.clipboard:
-        daemonize()
 
     Escrotum(filename=args.FILENAME, selection=args.select, xid=args.xid,
              delay=args.delay, selection_delay=args.selection_delay,
