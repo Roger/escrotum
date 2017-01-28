@@ -273,6 +273,9 @@ class Escrotum(gtk.Window):
         # daemonize here so we don't mess with the CWD on subprocess
         if self.use_clipboard:
             daemonize()
+        else:
+            # exit here instead of inside save_file
+            exit()
 
     def get_geometry(self):
         monitors = self.screen.get_n_monitors()
@@ -369,7 +372,6 @@ class Escrotum(gtk.Window):
         except Exception, error:
             print error
             exit(EXIT_CANT_SAVE_IMAGE)
-        exit()
 
     def call_exec(self, width, height):
         filename = '[CLIPBOARD]' if self.use_clipboard else self.filename
