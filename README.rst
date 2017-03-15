@@ -48,5 +48,5 @@ Features
 Install
 -------
 
-* on archlinux `yaourt -S escrotum-git`
-* with pip `pip install escrotum`
+* on archlinux :code:`yaourt -S escrotum-git`
+* with pip :code:`pip install escrotum`
