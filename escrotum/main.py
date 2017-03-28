@@ -50,10 +50,7 @@ class Escrotum(gtk.Window):
         self.xid = xid
         self.countdown = countdown
 
-        if not xid:
-            self.root = gtk.gdk.get_default_root_window()
-        else:
-            self.root = gtk.gdk.window_foreign_new(xid)
+        self.root = gtk.gdk.get_default_root_window()
 
         self.x = self.y = 0
         self.start_x = self.start_y = 0
@@ -245,7 +242,11 @@ class Escrotum(gtk.Window):
             if not xid:
                 print "Can't get the xid of the selected window"
                 exit(EXIT_XID_ERROR)
-            selected_window = gtk.gdk.window_foreign_new(xid)
+            self.xid = xid
+
+        # selected by xid or clicked
+        if self.xid:
+            selected_window = gtk.gdk.window_foreign_new(self.xid)
             width, height = selected_window.get_size()
             x, y = selected_window.get_origin()
 
