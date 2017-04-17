@@ -263,10 +263,9 @@ class Escrotum(gtk.Window):
         if not pb:
             print "Invalid Pixbuf"
             exit(EXIT_INVALID_PIXBUF)
+        self.save_file(pb, width, height)
         if self.use_clipboard:
             self.save_clipboard(pb)
-        else:
-            self.save_file(pb, width, height)
         if self.command:
             self.call_exec(width, height)
 
