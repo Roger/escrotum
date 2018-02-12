@@ -1,0 +1,65 @@
+.TH ESCROTUM 1 "January 2018"
+.SH NAME
+escrotum \- screenshot capture program inspired by scrot
+.SH SYNOPSIS
+.B escrotum
+[\fI\,OPTION\/\fR]... [\fI\,FILENAME\/\fR]
+.SH DESCRIPTION
+Minimalist screenshot capture program inspired by scrot.
+.PP
+.I FILENAME
+optional positional argument defines image filename, default is %Y-%m-%d-%H%M%S_$wx$h_escrotum.png
+.PP
+\fB\-\-exec\fR option (see below) and \fIFILENAME\fR parameters can take format specifiers that are expanded by escrotum when encountered.
+
+There are two types of format specifier. Characters preceded by a '%' are interpreted by \fBstrftime\fR(2). These options may be used to refer to the current date and time. The second kind are internal to escrotum and are prefixed by '$'. The following specifiers are recognised:
+.br
+$f - image path/filename (ignored when used in the \fIFILENAME\fR)
+.br
+$h - image height
+.br
+$w - image width
+.SH OPTIONS
+.TP
+\fB\-C\fR, \fB\-\-clipboard\fR
+store the image on the clipboard
+.TP
+\fB\-c\fR, \fB\-\-countdown\fR
+show a countdown before taking the shot (requires delay)
+.TP
+\fB\-d\fR, \fB\-\-delay\fR=\fI\,SECONDS\/\fR
+wait specified number of seconds before taking a shot
+.TP
+\fB\-e\fR, \fB\-\-exec\fR=\fI\,COMMAND\/\fR
+run specified command after the image is taken
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+show help message and exit
+.TP
+\fB\-s\fR, \fB\-\-select\fR
+interactively choose a window or rectangle with the mouse, cancels with Esc or Right Click
+.TP
+\fB\-\-selection\-delay\fR=\fI\,MILLISECONDS\/\fR
+wait specified number of milliseconds before taking a shot after selection
+.TP
+\fB\-v\fR, \fB\-\-version\fR
+output version information and exit
+.TP
+\fB\-x\fR, \fB\-\-xid\fR=\fI\,XID\/\fR
+take a screenshot of the xid window
+.SH EXIT STATUS
+1 can't get the window by xid
+.br
+2 invalid pixbuf
+.br
+3 can't save the image
+.br
+4 user canceled selection
+.br
+5 can't grab the mouse
+.SH AUTHOR
+Roger Duran <rogerduran@gmail.com>
+.SH COPYRIGHT
+Copyright © Roger Duran.  License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+.br
+This is free software: you are free to change and redistribute it.  There is NO WARRANTY, to the extent permitted by law.
