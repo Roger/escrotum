@@ -1,4 +1,4 @@
-Escrotum
+Escrotum (`Help Wanted! <https://github.com/Roger/escrotum/issues/44>`_)
 ========
 
 Linux screen capture using pygtk, inspired by scrot
