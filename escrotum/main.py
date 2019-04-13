@@ -6,12 +6,16 @@ import datetime
 import subprocess
 import argparse
 
-import gtk
+import gi
+
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk as gtk
+from gi.repository import Gdk as gdk
+from gi.repository import GdkPixbuf as Pixbuf
 import cairo
 import gobject
 
-from utils import get_selected_window, daemonize, bgra2rgba
-
+from util import get_selected_window, daemonize, bgra2rgba
 
 __version__ = "0.2.1"
 
@@ -26,7 +30,7 @@ class Escrotum(gtk.Window):
     def __init__(self, filename=None, selection=False, xid=None, delay=None,
                  selection_delay=250, countdown=False, use_clipboard=False,
                  command=None):
-        super(Escrotum, self).__init__(gtk.WINDOW_POPUP)
+        super(Escrotum, self).__init__()
         self.started = False
 
         self.command = command
@@ -35,7 +39,7 @@ class Escrotum(gtk.Window):
         self.use_clipboard = use_clipboard
 
         self.screen = self.get_screen()
-        colormap = self.screen.get_rgba_colormap()
+        colormap = self.screen.get_rgba_visual()
 
         self.rgba_support = False
         if (colormap is not None and self.screen.is_composited()):
@@ -51,9 +55,9 @@ class Escrotum(gtk.Window):
         self.countdown = countdown
 
         if not xid:
-            self.root = gtk.gdk.get_default_root_window()
+            self.root = gdk.get_default_root_window()
         else:
-            self.root = gtk.gdk.window_foreign_new(xid)
+            self.root = gdk.window_foreign_new(xid)
 
         self.x = self.y = 0
         self.start_x = self.start_y = 0
@@ -62,7 +66,8 @@ class Escrotum(gtk.Window):
         self.area = gtk.DrawingArea()
 
         self.set_keep_above(True)
-        self.area.connect("expose-event", self.on_expose)
+        # self.area.connect("expose-event", self.on_expose)
+        #self.area.connect("expose-event", self.on_expose)
 
         self.add(self.area)
 
@@ -84,43 +89,46 @@ class Escrotum(gtk.Window):
                 sys.stdout.flush()
             return True
         if self.delay == 0 and self.countdown:
-            print "."
+            print(".")
 
         if self.selection and not self.xid:
             self.grab()
         else:
-            self.width, self.height = self.root.get_size()
+            self.width, self.height = self.root.get_width(), self.root.get_height()
             self.screenshot()
 
     def draw(self):
         self.painted = True
         if self.rgba_support:
             return
-        width, height = self.get_size()
+        width, height = self.root.get_width(), self.root.get_height()
 
-        mask = gtk.gdk.Pixmap(None, width, height, 1)
-
-        gc = mask.new_gc()
-
+        # mask = gdk.Pixmap(None, width, height, 1)
+        #mask = gdk.cairo_region_create_from_surface(None, width, height, 1)
+        # mask = cairo.ImageSurface(cairo.FORMAT_ARGB32,width,height)
+        #
+        # gc = mask.new_gc()
+        #
         # draw the rectangle
-        gc.foreground = gtk.gdk.Color(0, 0, 0, 1)
-        mask.draw_rectangle(gc, True, 0, 0, width, height)
+        # gc.foreground = gdk.Color(0, 0, 0, 1)
+        mask=gdk.Window.begin_draw_frame(self.root,cairo.Region(cairo.RectangleInt(0,0,width,height)))
+       # mask.draw_rectangle(gc, True, 0, 0, width, height)
 
         # and clear the background
-        gc.foreground = gtk.gdk.Color(0, 0, 0, 0)
-        mask.draw_rectangle(gc, True, 2, 2, width-4, height-4)
+        # gc.foreground = gdk.Color(0, 0, 0, 0)
+        # mask.draw_rectangle(gc, True, 2, 2, width - 4, height - 4)
 
-        self.shape_combine_mask(mask, 0, 0)
+        #self.shape_combine_mask(mask, 0, 0)
 
     def on_expose(self, widget, event):
-        width, height = self.get_size()
+        width, height = self.get_width(), self.get_height()
         white_gc = self.style.white_gc
         black_gc = self.style.black_gc
 
-        # actualy paint the window
+        # actualy paint thescrotum/main.py:113e window
         self.area.window.draw_rectangle(white_gc, True, 0, 0, width, height)
-        self.area.window.draw_rectangle(black_gc, True, 1, 1, width-2,
-                                        height-2)
+        self.area.window.draw_rectangle(black_gc, True, 1, 1, width - 2,
+                                        height - 2)
         self.draw()
 
     def grab(self):
@@ -128,29 +136,29 @@ class Escrotum(gtk.Window):
         Grab the mouse
         """
 
-        mask = gtk.gdk.BUTTON_PRESS_MASK | gtk.gdk.BUTTON_RELEASE_MASK | \
-            gtk.gdk.POINTER_MOTION_MASK | gtk.gdk.POINTER_MOTION_HINT_MASK | \
-            gtk.gdk.ENTER_NOTIFY_MASK | gtk.gdk.LEAVE_NOTIFY_MASK
+        mask = gdk.EventMask.BUTTON_PRESS_MASK | gdk.EventMask.BUTTON_RELEASE_MASK | \
+               gdk.EventMask.POINTER_MOTION_MASK | gdk.EventMask.POINTER_MOTION_HINT_MASK | \
+               gdk.EventMask.ENTER_NOTIFY_MASK | gdk.EventMask.LEAVE_NOTIFY_MASK
 
-        self.root.set_events(gtk.gdk.BUTTON_PRESS | gtk.gdk.MOTION_NOTIFY |
-                             gtk.gdk.BUTTON_RELEASE)
+        self.root.set_events(gdk.EventMask.BUTTON_PRESS_MASK | gdk.EventMask.POINTER_MOTION_HINT_MASK |
+                             gdk.EventMask.BUTTON_RELEASE_MASK)
 
-        status = gtk.gdk.pointer_grab(self.root, event_mask=mask,
-                                      cursor=gtk.gdk.Cursor(gtk.gdk.CROSSHAIR))
+        status = gdk.pointer_grab(self.root, False, mask, None,
+                                      gdk.Cursor(gdk.CursorType.CROSSHAIR),0)
 
-        if status != gtk.gdk.GRAB_SUCCESS:
-            print "Can't grab the mouse"
+        if status != gdk.GrabStatus.SUCCESS:
+            print("Can't grab the mouse")
             exit(EXIT_CANT_GRAB_MOUSE)
-        gtk.gdk.event_handler_set(self.event_handler)
+        gdk.event_handler_set(self.event_handler)
 
     def ungrab(self):
         """
         Ungrab the mouse and keyboard
         """
 
-        self.root.set_events(())
-        gtk.gdk.pointer_ungrab()
-        gtk.gdk.keyboard_ungrab()
+        self.root.set_events(gdk.EventMask.LEAVE_NOTIFY_MASK)
+        gdk.pointer_ungrab()
+        gdk.keyboard_ungrab()
 
     @property
     def click_selection(self):
@@ -164,23 +172,24 @@ class Escrotum(gtk.Window):
         Handle mouse events
         """
 
-        if event.type == gtk.gdk.BUTTON_PRESS:
-            if event.button != 1:
-                print "Canceled by the user"
+        if event.type == gdk.EventType.BUTTON_PRESS:
+            if event.button.button != 1:
+                print("Canceled by the user")
+
                 exit(EXIT_CANCEL)
             # grab the keyboard only when selection started
-            gtk.gdk.keyboard_grab(self.root)
+            gdk.keyboard_grab(self.root,False,0)
             self.started = True
             self.start_x = int(event.x)
             self.start_y = int(event.y)
             self.move(self.x, self.y)
 
-        elif event.type == gtk.gdk.KEY_RELEASE:
-            if gtk.gdk.keyval_name(event.keyval) == "Escape":
-                print "Canceled by the user"
+        elif event.type == gdk.EventType.KEY_RELEASE:
+            if gdk.keyval_name(event.keyval) == "Escape":
+                print("Canceled by the user")
                 exit(EXIT_CANCEL)
 
-        elif event.type == gtk.gdk.MOTION_NOTIFY:
+        elif event.type == gdk.EventType.MOTION_NOTIFY:
             if not self.started:
                 return
 
@@ -192,7 +201,7 @@ class Escrotum(gtk.Window):
                 self.move(self.x, self.y)
                 self.show_all()
 
-        elif event.type == gtk.gdk.BUTTON_RELEASE:
+        elif event.type == gdk.EventType.BUTTON_RELEASE:
             if not self.started:
                 return
 
@@ -243,25 +252,26 @@ class Escrotum(gtk.Window):
         if self.click_selection:
             xid = get_selected_window()
             if not xid:
-                print "Can't get the xid of the selected window"
+                print("Can't get the xid of the selected window")
                 exit(EXIT_XID_ERROR)
-            selected_window = gtk.gdk.window_foreign_new(xid)
-            width, height = selected_window.get_size()
+            selected_window = gdk.window_foreign_new(xid)
+            width, height = selected_window.get_width(), selected_window.get_height()
             x, y = selected_window.get_origin()
 
-        pb = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, width, height)
+        pb = Pixbuf.Pixbuf.new(Pixbuf.Colorspace.RGB, True, 8, width, height)
         # mask the pixbuf if we have more than one screen
-        root_width, root_height = window.get_size()
-        pb2 = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8,
+        root_width, root_height = window.get_width(), window.get_height()
+        pb2 = Pixbuf.Pixbuf.new(Pixbuf.Colorspace.RGB, True, 8,
                              root_width, root_height)
-        pb2 = pb2.get_from_drawable(window, window.get_colormap(),
-                                    x, y, x, y,
-                                    width, height)
+        # pb2 = pb2.get_from_drawable(window, window.get_colormap(),
+        #                             x, y, x, y,
+        #                             width, height)
+        pb2 = gdk.pixbuf_get_from_window(window, x, y, width, height)
         pb2 = self.mask_pixbuf(pb2, root_width, root_height)
         pb2.copy_area(x, y, width, height, pb, 0, 0)
 
         if not pb:
-            print "Invalid Pixbuf"
+            print("Invalid Pixbuf")
             exit(EXIT_INVALID_PIXBUF)
         if self.use_clipboard:
             self.save_clipboard(pb)
@@ -302,25 +312,27 @@ class Escrotum(gtk.Window):
         img = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
 
         cr = cairo.Context(img)
-        gdkcr = gtk.gdk.CairoContext(cr)
+        # gdkcr = gdk.CairoContext(cr)
+        #gdkcr = gdk.cairo_get_drawing_context(cr)
+
 
         # fill with the dafault color
-        gdkcr.set_source_rgba(0, 0, 0, 1)
-        gdkcr.fill()
-        gdkcr.paint()
+        cr.set_source_rgba(0, 0, 0, 1)
+        cr.fill()
+        cr.paint()
 
         # use the mask to paint from the pixbuf
-        gdkcr.set_source_pixbuf(pb, 0, 0)
-        gdkcr.mask_surface(mask, 0, 0)
-        gdkcr.fill()
+        gdk.cairo_set_source_pixbuf(cr, pb, 0, 0)
+        cr.mask_surface(mask, 0, 0)
+        cr.fill()
 
         stride = img.get_stride()
         pixels = img.get_data()
-
         data = bgra2rgba(pixels, width, height)
 
-        new_pb = gtk.gdk.pixbuf_new_from_data(data, gtk.gdk.COLORSPACE_RGB,
+        new_pb = Pixbuf.Pixbuf.new_from_data(data, Pixbuf.Colorspace.RGB,
                                               True, 8, width, height, stride)
+
         return new_pb
 
     def save_clipboard(self, pb):
@@ -367,10 +379,10 @@ class Escrotum(gtk.Window):
             filetype = self.filename.rsplit(".", 1)[1]
 
         try:
-            pb.save(self.filename, filetype)
-            print self.filename
-        except Exception, error:
-            print error
+            pb.savev(self.filename, filetype, ["quality"], ["100"])
+            print(self.filename)
+        except Exception as error:
+            print(error)
             exit(EXIT_CANT_SAVE_IMAGE)
 
     def call_exec(self, width, height):
@@ -478,7 +490,7 @@ def run():
         exit()
 
     if args.countdown and not args.delay:
-        print "Countdown parameter requires delay"
+        print("Countdown parameter requires delay")
         exit()
 
     Escrotum(filename=args.FILENAME, selection=args.select, xid=args.xid,
@@ -489,8 +501,9 @@ def run():
     try:
         gtk.main()
     except KeyboardInterrupt:
-        print "Canceled by the user"
+        print("Canceled by the user")
         exit(EXIT_CANCEL)
+
 
 if __name__ == "__main__":
     run()
