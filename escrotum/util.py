@@ -52,7 +52,7 @@ def daemonize():
         if pid > 0:
             # exit first parent
             sys.exit(0)
-    except OSError, e:
+    except OSError as e:
         sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
         sys.exit(1)
 
@@ -67,7 +67,7 @@ def daemonize():
         if pid > 0:
             # exit from second parent
             sys.exit(0)
-    except OSError, e:
+    except OSError as e:
         sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
         sys.exit(1)
 
@@ -75,9 +75,9 @@ def daemonize():
     sys.stdout.flush()
     sys.stderr.flush()
 
-    si = file("/dev/null", 'r')
-    so = file("/dev/null", 'a+')
-    se = file("/dev/null", 'a+', 0)
+    si = open("/dev/null", 'r')
+    so = open("/dev/null", 'a+')
+    se = open("/dev/null", 'a+', 0)
 
     os.dup2(si.fileno(), sys.stdin.fileno())
     os.dup2(so.fileno(), sys.stdout.fileno())
