@@ -421,7 +421,7 @@ def get_options():
   \t$w image width
   \t$h image height
   Example:
-  \tescrotum '%Y-%m-%d_$wx$h_escrotum.png'
+  \tescrotum '%Y-%m-%d-%H%M%S_$wx$h_escrotum.png'
   \tCreates a file called something like 2013-06-17-082335_263x738_escrotum.png
 
   EXIT STATUS CODES
