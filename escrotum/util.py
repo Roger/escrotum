@@ -1,6 +1,8 @@
 import os
 import sys
 
+from gi.repository import GdkX11
+
 
 def get_selected_window():
     """
@@ -37,6 +39,11 @@ def get_selected_window():
     if value == 0:
         value = root_id.value
     return value
+
+
+def get_window_from_xid(xid):
+    display = GdkX11.X11Display.get_default()
+    return GdkX11.X11Window.foreign_new_for_display(display, xid)
 
 
 def daemonize():
