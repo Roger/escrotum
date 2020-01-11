@@ -99,43 +99,38 @@ class Escrotum(gtk.Dialog):
 
     def draw(self):
         self.painted = True
-        if self.rgba_support:
+        if self.rgba_support or self.width < 4 or self.height < 4:
             return
-        width, height = self.root.get_width(), self.root.get_height()
 
-        # mask = gdk.Pixmap(None, width, height, 1)
-        #mask = gdk.cairo_region_create_from_surface(None, width, height, 1)
-        # mask = cairo.ImageSurface(cairo.FORMAT_ARGB32,width,height)
-        #
-        # gc = mask.new_gc()
-        #
-        # draw the rectangle
-        # gc.foreground = gdk.Color(0, 0, 0, 1)
-        mask=gdk.Window.begin_draw_frame(self.root,cairo.Region(cairo.RectangleInt(0,0,width,height)))
-       # mask.draw_rectangle(gc, True, 0, 0, width, height)
+        outer = cairo.Region(cairo.RectangleInt(0, 0, self.width, self.height))
+        inner = cairo.Region(
+            cairo.RectangleInt(2, 2, self.width - 4, self.height - 4))
 
-        # and clear the background
-        # gc.foreground = gdk.Color(0, 0, 0, 0)
-        # mask.draw_rectangle(gc, True, 2, 2, width - 4, height - 4)
-
-        #self.shape_combine_mask(mask, 0, 0)
+        outer.subtract(inner)
+        self.shape_combine_region(outer)
 
     def on_expose(self, widget, cr):
         window = self.get_window()
         width, height = window.get_width(), window.get_height()
 
-        cr.set_source_rgba(255, 255, 255, 0.1)
+        def set_source(r, g, b, a):
+            if not self.rgba_support:
+                cr.set_source_rgb(r, g, b)
+            else:
+                cr.set_source_rgba(r, g, b, a)
+
+        set_source(255, 255, 255, 0.1)
         cr.set_operator(cairo.OPERATOR_SOURCE)
         cr.paint()
         cr.set_operator(cairo.OPERATOR_OVER)
 
-        cr.set_source_rgba(255, 255, 255, 0.8)
+        set_source(255, 255, 255, 0.8)
         cr.set_line_width(1)
         cr.rectangle(0, 0, width, height)
         cr.set_line_join(cairo.LINE_JOIN_MITER)
         cr.stroke()
 
-        cr.set_source_rgba(0, 0, 0, 0.8)
+        set_source(0, 0, 0, 0.8)
         cr.set_line_width(1)
         cr.rectangle(1, 1, width-1, height-1)
         cr.set_line_join(cairo.LINE_JOIN_MITER)
