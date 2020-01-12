@@ -481,7 +481,7 @@ def get_options():
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="Minimalist screenshot capture program inspired by scrot.",
+        description="Minimalist screenshot capture and screen recording program inspired by scrot.",
         epilog=epilog)
 
     parser.add_argument(
@@ -511,7 +511,7 @@ def get_options():
         help="run the command after the image is taken")
     parser.add_argument(
         '-r', '--record', default=False, action="store_true",
-        help="record video")
+        help="screen recording. Alt+Ctrl+s to stop the recording")
     parser.add_argument(
         'FILENAME', type=str, nargs="?",
         help="image filename, default is "
