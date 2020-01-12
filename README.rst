@@ -20,6 +20,7 @@ Features
 * store the image to the clipboard
 
 ::
+
     usage: escrotum [-h] [-v] [-s] [-x XID] [-d DELAY]
                     [--selection-delay SELECTION_DELAY] [-c] [-C] [-e COMMAND]
                     [-r]
