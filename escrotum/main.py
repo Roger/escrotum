@@ -337,7 +337,7 @@ class Escrotum(gtk.Dialog):
         escrotum would be alive until the clipboard owner is changed
         """
 
-        clipboard = gtk.Clipboard()
+        clipboard = gtk.Clipboard.get(gdk.SELECTION_CLIPBOARD)
         clipboard.set_image(pb)
         clipboard.connect("owner-change", self.on_owner_change)
 
