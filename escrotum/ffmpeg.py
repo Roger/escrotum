@@ -1,6 +1,6 @@
 import os
 import subprocess
-from util import cmd_exists
+from .util import cmd_exists
 
 
 class Ffmpeg:

@@ -15,9 +15,9 @@ from gi.repository import GdkPixbuf as Pixbuf
 from gi.repository import GLib as glib
 import cairo
 
-from util import get_selected_window, get_window_from_xid, daemonize, bgra2rgba
-from ffmpeg import Ffmpeg
-from keybinding import GrabKeyboard
+from .util import get_selected_window, get_window_from_xid, daemonize, bgra2rgba
+from .ffmpeg import Ffmpeg
+from .keybinding import GrabKeyboard
 
 
 __version__ = "0.2.1"
