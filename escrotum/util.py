@@ -108,7 +108,7 @@ def bgra2rgba(pixels, width, height):
         arr.shape = (-1, 4)
         data = arr[:,[2,1,0,3]]
     else:
-        data = array.array ("c", pixels)
+        data = array.array ('B', pixels)
         for x in range (width):
             for y in range (height):
                 i = (width * y + x) * 4
