@@ -12,7 +12,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-      'gobject',
+      'PyGObject',
       'xcffib',
     ],
     entry_points={
