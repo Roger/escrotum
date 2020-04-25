@@ -290,7 +290,7 @@ class Escrotum(gtk.Dialog):
         root_width, root_height = window.get_width(), window.get_height()
         pb2 = Pixbuf.Pixbuf.new(Pixbuf.Colorspace.RGB, True, 8,
                                 root_width, root_height)
-        pb2 = gdk.pixbuf_get_from_window(window, x, y, width, height)
+        pb2 = gdk.pixbuf_get_from_window(window, 0, 0, root_width, root_height)
         pb2 = self.mask_pixbuf(pb2, root_width, root_height)
         pb2.copy_area(x, y, width, height, pb, 0, 0)
 
