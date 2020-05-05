@@ -310,8 +310,7 @@ class Escrotum(gtk.Dialog):
             daemonize()
         else:
             # exit here instead of inside save_file
-            exit()
-        self.on_exit(width, height)
+            self.on_exit(width, height)
 
     def capture_video(self, x, y, width, height):
         filename = self._expand_argument(width, height, self.filename)
