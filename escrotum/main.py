@@ -410,9 +410,17 @@ class Escrotum(gtk.Dialog):
         filetype = "png"
         if "." in self.filename:
             filetype = self.filename.rsplit(".", 1)[1]
+            if filetype == "jpg":
+                filetype = "jpeg"
+
+        optskeys = []
+        optsvalues = []
+        if filetype != "png":
+            optskeys.append("quality")
+            optsvalues.append("100")
 
         try:
-            pb.savev(self.filename, filetype, ["quality"], ["100"])
+            pb.savev(self.filename, filetype, optskeys, optsvalues)
             print(self.filename)
         except Exception as error:
             print(error)
