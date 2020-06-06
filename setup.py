@@ -14,6 +14,7 @@ setup(
     install_requires=[
       'PyGObject',
       'xcffib',
+      'pycairo',
     ],
     entry_points={
         'console_scripts': [
