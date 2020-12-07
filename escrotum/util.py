@@ -113,7 +113,7 @@ def bgra2rgba(pixels, width, height):
             for y in range (height):
                 i = (width * y + x) * 4
                 data[i + 0], data[i + 2] = data[i + 2], data[i + 0]
-    return data.tostring()
+    return data.tobytes()
 
 
 def cmd_exists(cmd):
