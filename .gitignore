@@ -2,3 +2,4 @@
 escrotum.egg-info
 build/
 dist/
+venv/
