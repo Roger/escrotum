@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="escrotum",
-    version="1.0.1",
+    version="1.0.1", # todo: update me
     author='Roger Duran',
     author_email='rogerduran@gmail.com',
     url='https://github.com/Roger/escrotum',
