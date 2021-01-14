@@ -415,6 +415,9 @@ class Escrotum(gtk.Dialog):
 
         optskeys = []
         optsvalues = []
+        if filetype == "jpg":
+            optskeys.append("quality")
+            optsvalues.append("100")
 
         try:
             pb.savev(self.filename, filetype, optskeys, optsvalues)
