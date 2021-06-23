@@ -278,10 +278,8 @@ class Escrotum(gtk.Dialog):
             self.capture_image(x, y, width, height, window)
 
     def on_exit(self, width, height):
-        if self.command:
-            command = self.command.replace("$f", self.filename)
-            command = self._expand_argument(width, height, command)
-            subprocess.call(command, shell=True)
+        # call_exec returns immediately if self.command is None
+        self.call_exec(width, height)
         exit()
 
     def capture_image(self, x, y, width, height, window):
@@ -302,8 +300,8 @@ class Escrotum(gtk.Dialog):
         else:
             self.save_file(pb, width, height)
 
-        if self.command:
-            self.call_exec(width, height)
+        # call_exec returns immediately if self.command is None
+        self.call_exec(width, height)
 
         # daemonize here so we don't mess with the CWD on subprocess
         if self.use_clipboard:
@@ -427,10 +425,15 @@ class Escrotum(gtk.Dialog):
             exit(EXIT_CANT_SAVE_IMAGE)
 
     def call_exec(self, width, height):
+        if not self.command:
+            return
         filename = '[CLIPBOARD]' if self.use_clipboard else self.filename
         command = self.command.replace("$f", filename)
         command = self._expand_argument(width, height, command)
         subprocess.call(command, shell=True)
+        # Set self.command to None
+        # This prevents calling the command twice
+        self.command = None
 
     def set_rect_size(self, event):
         """
