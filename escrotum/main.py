@@ -84,6 +84,8 @@ class Escrotum(gtk.Dialog):
         self.set_keep_above(True)
         self.connect("draw", self.on_expose)
 
+        self.now = datetime.datetime.now()
+
         if delay:
             if countdown:
                 sys.stdout.write("Taking shot in ..%s" % delay)
@@ -394,7 +396,7 @@ class Escrotum(gtk.Dialog):
             exit()
 
     def _expand_argument(self, width, height, string):
-        string = datetime.datetime.now().strftime(string)
+        string = self.now.strftime(string)
         string = string.replace("$w", str(width))
         string = string.replace("$h", str(height))
         string = os.path.expanduser(string)
